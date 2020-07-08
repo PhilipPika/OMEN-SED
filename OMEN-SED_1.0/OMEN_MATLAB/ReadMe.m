@@ -5,6 +5,7 @@
 % Email: dominik.huelse@ucr.edu or dominik.huelse@gmx.de
 
 % update from 0.9: included pyrite precipitation (implicitly) & gammaH2S dependent on BW oxygenation in Fortran code
+% update from 1.0: included explicit Fe-cycle (07.07.2020)
 
 % 1) Example for executing the model:
 % How to calculate a single sediment column with default parameters and plotting results:

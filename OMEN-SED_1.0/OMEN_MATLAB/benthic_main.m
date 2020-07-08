@@ -21,7 +21,7 @@ classdef benthic_main < handle
         z0  = 0;                                % surface
         zbio=10.0;                              % bioturbation depth (cm)
         zinf=100;                               %Inifinity (cm)
-        
+        loc_BW_O2_anoxia=20E-009;
         Dbio;                                   % bioturbation coefficient (cm2/yr) - calculated by internal fct. biorate()
         por=0.85;                               % porosity (-)
         tort=3.0;                               %tortuosity (-)
@@ -38,6 +38,7 @@ classdef benthic_main < handle
         NC2;                                    % N/C second TOC fraction (mol/mol)
         PC1;                                    % P/C first TOC fraction (mol/mol)
         PC2;                                    % P/C second TOC fraction (mol/mol)
+        FeIIIC;                                 % FeIII/C (mol/mol)
         SO4C;                                   % SO4/C (mol/mol)
         O2H2S;                                  % O2/H2S ratio for oxidation of H2S (mol/mol)
         DICC1;                                  % DIC/C until zSO4 (mol/mol)
@@ -103,6 +104,7 @@ classdef benthic_main < handle
             obj.NC2= 16.0/106.0*obj.SD;        	% N/C second TOC fraction (mol/mol)
             obj.PC1=1/106*obj.SD;               % P/C first TOC fraction  1/106 (mol/mol)
             obj.PC2=1/106*obj.SD;               % P/C second TOC fraction 1/106 (mol/mol)
+            obj.FeIIIC=(4.0)*obj.SD;            % FeIII/C (mol/mol)
             obj.SO4C=(138.0/212.0)*obj.SD;      % SO4/C (mol/mol) (was 0.5*obj.SD;)
             obj.O2H2S=2.0;                      % Mol of O2 to oxidize 1 mol H2S
             obj.DICC1=1.0*obj.SD;             	% DIC/C until zSO4 (mol/mol)

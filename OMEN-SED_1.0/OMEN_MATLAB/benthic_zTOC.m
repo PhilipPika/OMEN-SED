@@ -34,6 +34,7 @@ classdef benthic_zTOC < handle
             swi.C01 = (swi.Fnonbio1*(-rTOC.a11*exp(rTOC.a11*bsd.zbio)+rTOC.b11*exp(rTOC.b11*bsd.zbio)))/(-obj.DC1*rTOC.b11*rTOC.a11*exp(rTOC.b11*bsd.zbio) + obj.DC1*rTOC.b11*rTOC.a11*exp(rTOC.a11*bsd.zbio) + ...
                 obj.DC1*rTOC.b11*rTOC.a11*bsd.por*exp(rTOC.b11*bsd.zbio) - obj.DC1*rTOC.b11*rTOC.a11*bsd.por*exp(rTOC.a11*bsd.zbio) - bsd.w*rTOC.a11*exp(rTOC.a11*bsd.zbio) + bsd.w*rTOC.b11*exp(rTOC.b11*bsd.zbio) + ...
                 bsd.w*bsd.por*rTOC.a11*exp(rTOC.a11*bsd.zbio) - bsd.w*bsd.por*rTOC.b11*exp(rTOC.b11*bsd.zbio));
+% %            swi.C01 = swi.Fnonbio1/((1-bsd.por)*bsd.w);
             res.swi.C01 = swi.C01;
             
             rTOC.A11=-(swi.C01.*rTOC.b11.*exp(rTOC.b11.*bsd.zbio))./(rTOC.a11.*exp(rTOC.a11.*bsd.zbio)-rTOC.b11.*exp(rTOC.b11.*bsd.zbio)+bsd.tol_const);
@@ -47,6 +48,7 @@ classdef benthic_zTOC < handle
             swi.C02 = (swi.Fnonbio2*(-rTOC.a12*exp(rTOC.a12*bsd.zbio)+rTOC.b12*exp(rTOC.b12*bsd.zbio)))/(-obj.DC1*rTOC.b12*rTOC.a12*exp(rTOC.b12*bsd.zbio) + obj.DC1*rTOC.b12*rTOC.a12*exp(rTOC.a12*bsd.zbio) + ...
                 obj.DC1*rTOC.b12*rTOC.a12*bsd.por*exp(rTOC.b12*bsd.zbio) - obj.DC1*rTOC.b12*rTOC.a12*bsd.por*exp(rTOC.a12*bsd.zbio) - bsd.w*rTOC.a12*exp(rTOC.a12*bsd.zbio) + bsd.w*rTOC.b12*exp(rTOC.b12*bsd.zbio) + ...
                 bsd.w*bsd.por*rTOC.a12*exp(rTOC.a12*bsd.zbio) - bsd.w*bsd.por*rTOC.b12*exp(rTOC.b12*bsd.zbio));
+% %             swi.C02 = swi.Fnonbio2/((1-bsd.por)*bsd.w);
             res.swi.C02 = swi.C02;
             
             rTOC.A12=-(swi.C02.*rTOC.b12.*exp(rTOC.b12.*bsd.zbio))./(rTOC.a12.*exp(rTOC.a12.*bsd.zbio)-rTOC.b12.*exp(rTOC.b12.*bsd.zbio)+bsd.tol_const);
@@ -57,7 +59,7 @@ classdef benthic_zTOC < handle
             % Sed input flux to upper boundary, per cm^2 water column
             [res.Fswi_TOC, res.Fswi_TOC1, res.Fswi_TOC2] = obj.calcCflx(bsd.z0, bsd, swi, res);
             
-            %Flux through lower boundary zinf, per cm^2 water-column
+            % Flux through lower boundary zinf, per cm^2 water-column
             res.F_TOC1=-(1-bsd.por).*bsd.w.*rTOC.A21.*exp(rTOC.a21.*bsd.zinf);
             res.F_TOC2=-(1-bsd.por).*bsd.w.*rTOC.A22.*exp(rTOC.a22.*bsd.zinf);
             res.F_TOC=res.F_TOC1+res.F_TOC2;
@@ -341,9 +343,9 @@ classdef benthic_zTOC < handle
             reacf2=res.zTOC.k2.*reac2;
             
             FReac1 =-reacf1.*(r.A11.*(exp(r.a11.*zU).*r.b11 - exp(r.b11.*zU).*r.a11 - exp(r.a11.*zL).*r.b11 + exp(r.b11.*zL).*r.a11)...
-                +swi.C01.*exp(r.b11.*zU).*r.a11 -swi.C01.*exp(r.b11.*zL).*r.a11)./(r.a11.*r.b11) ...
+                +res.swi.C01.*exp(r.b11.*zU).*r.a11 -res.swi.C01.*exp(r.b11.*zL).*r.a11)./(r.a11.*r.b11) ...
                 -reacf2.*(r.A12.*(exp(r.a12.*zU).*r.b12 - exp(r.b12.*zU).*r.a12 - exp(r.a12.*zL).*r.b12 + exp(r.b12.*zL).*r.a12) ...
-                +swi.C02.*exp(r.b12.*zU).*r.a12 -swi.C02.*exp(r.b12.*zL).*r.a12)./(r.a12.*r.b12);
+                +res.swi.C02.*exp(r.b12.*zU).*r.a12 -res.swi.C02.*exp(r.b12.*zL).*r.a12)./(r.a12.*r.b12);
         end
         
         function FReac2 = calcReac_l2(obj, zU, zL, reac1, reac2, bsd, swi, res)
@@ -384,9 +386,9 @@ classdef benthic_zTOC < handle
             reacf2=reac2;
             
             FOM1 =-reacf1.*(r.A11.*(exp(r.a11.*zU).*r.b11 - exp(r.b11.*zU).*r.a11 - exp(r.a11.*zL).*r.b11 + exp(r.b11.*zL).*r.a11)...
-                +swi.C01.*exp(r.b11.*zU).*r.a11 -swi.C01.*exp(r.b11.*zL).*r.a11)./(r.a11.*r.b11) ...
+                +res.swi.C01.*exp(r.b11.*zU).*r.a11 -res.swi.C01.*exp(r.b11.*zL).*r.a11)./(r.a11.*r.b11) ...
                 -reacf2.*(r.A12.*(exp(r.a12.*zU).*r.b12 - exp(r.b12.*zU).*r.a12 - exp(r.a12.*zL).*r.b12 + exp(r.b12.*zL).*r.a12) ...
-                +swi.C02.*exp(r.b12.*zU).*r.a12 -swi.C02.*exp(r.b12.*zL).*r.a12)./(r.a12.*r.b12);
+                +res.swi.C02.*exp(r.b12.*zU).*r.a12 -res.swi.C02.*exp(r.b12.*zL).*r.a12)./(r.a12.*r.b12);
         end
         
         function FOM2 = calcOM_l2(obj, zU, zL, reac1, reac2, bsd, swi, res)
