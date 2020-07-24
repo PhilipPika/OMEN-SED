@@ -475,7 +475,8 @@ classdef benthic_test
                 plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'y--')
                 plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
                 hold off
-                ylim([-20 0.0])
+                ylim_min = -round(res.zfeIII,-1)-10;
+                ylim([ylim_min 0.0])
                 xlabel ('FeIII ()')
                 %                ylabel('Depth (cm)')
                 %            title ('SO4 (mol/cm^3)')

@@ -172,13 +172,16 @@ classdef benthic_zTOC < handle
         end
         function [ e, dedz, f, dfdz, g, dgdz] ...
                 = calcfg_l2(obj, z, bsd, swi, res, reac1, reac2, Dtemp, ktemp)
-            % Basis functions for solutes, case z > zbio
+            % Basis functions for solutes / and now also solids, case z > zbio
             % reac1, reac2        - mol/mol S released per organic carbon C
             %
             % General solution for solute S is given by
             %  S(z) = A .* e(z) + B .* f(z) + g(z)
             
             r = res.rTOC;
+            
+            % check for solute or solid:
+            if(Dtemp ~= 0)  % this is a solute
             
             e = ones(1,bsd.ncl);
             dedz = zeros(1,bsd.ncl);
@@ -198,10 +201,58 @@ classdef benthic_zTOC < handle
             dgdz = PhiI1.*r.a21.*exp(r.a21.*z) + ...
                 PhiI2.*r.a22.*exp(r.a22.*z);
             
+            else    % this is a solid / no diffusion below zbio                
+                
+            e = ones(1,bsd.ncl);
+            dedz = zeros(1,bsd.ncl);
+            
+            f=zeros(1,bsd.ncl);        
+            dfdz = zeros(1,bsd.ncl);    
+            
+            %pfac=1./bsd.por;   % assume org matter already .*(1-bsd.por)
+            pfac = 1;          % in fact, already has (1-por)/por
+            
+            PhiI1 = -pfac.*obj.k1.*(reac1).*r.A21./(bsd.w.*r.a21);
+            PhiI2 = -pfac.*obj.k2.*(reac2).*r.A22./(bsd.w.*r.a22);
+            
+            g = PhiI1.*exp(r.a21.*z) + ...
+                PhiI2.*exp(r.a22.*z);
+            dgdz = PhiI1.*r.a21.*exp(r.a21.*z) + ...
+                PhiI2.*r.a22.*exp(r.a22.*z);
+            
+            end
             
         end
         
-        
+        function [ e, dedz, f, dfdz, g, dgdz] ...
+                = calcfg_l2_solids(obj, z, bsd, swi, res, reac1, reac2, Dtemp, ktemp)
+            % Basis functions for solids (e.g. FeIII) , case z > zbio
+            % reac1, reac2        - mol/mol S released per organic carbon C
+            %
+            % General solution for solute S is given by
+            %  S(z) = A .* e(z) + B .* f(z) + g(z)
+            
+            r = res.rTOC;
+            
+            e = ones(1,bsd.ncl);
+            dedz = zeros(1,bsd.ncl);
+            
+            % b2 = bsd.w./Dtemp;
+            f=zeros(1,bsd.ncl);         % exp(z.*b2);
+            dfdz = zeros(1,bsd.ncl);    % b2.*exp(z.*b2);
+            
+            %pfac=1./bsd.por;   % assume org matter already .*(1-bsd.por)
+            pfac = 1;          % in fact, already has (1-por)/por
+            
+            PhiI1 = -pfac.*obj.k1.*(reac1).*r.A21./(bsd.w.*r.a21);
+            PhiI2 = -pfac.*obj.k2.*(reac2).*r.A22./(bsd.w.*r.a22);
+            
+            g = PhiI1.*exp(r.a21.*z) + ...
+                PhiI2.*exp(r.a22.*z);
+            dgdz = PhiI1.*r.a21.*exp(r.a21.*z) + ...
+                PhiI2.*r.a22.*exp(r.a22.*z);                      
+            
+        end        
         
         function [ e, dedz, f, dfdz, g, dgdz] ...
                 = calcfg_l12(obj, z, bsd, swi, res, reac1, reac2, ktemp, ls)
