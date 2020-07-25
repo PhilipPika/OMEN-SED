@@ -26,6 +26,10 @@ classdef benthic_test
             bsd = benthic_main();
             %bottom water concentrations
             swi.T = 8.0;                                        % temperature (degree C)
+            
+            swi.Nitrogen=true;                                  % calculate N (true/false)
+            swi.Iron=true;                                      % calculate Fe (true/false)
+
 % WITH TOC CONCENTRATION
             swi.C01nonbio= 1.0*1e-2/12*bsd.rho_sed;            % TOC concentration at SWI (wt%) -> (mol/cm^3 bulk phase)
             swi.C02nonbio= 1.0*1e-2/12*bsd.rho_sed;            % TOC concentration at SWI (wt%) -> (mol/cm^3 bulk phase)
@@ -41,11 +45,14 @@ classdef benthic_test
 %            swi.C01 = swi.C01nonbio;                           % resulting bioturbated SWI-concentration, to be calculated in benthic_zTOC.m
 %            swi.C02 = swi.C02nonbio;                           % resulting bioturbated SWI-concentration, to be calculated in benthic_zTOC.m
 
+%            swi.FeIII0=2.8E-005; %3.0E-006;                   	% FeIII concentration at SWI (mol/cm^3) --> TODO: needs to be a flux!
+            swi.Flux_FeIII0 =  1110.0E-006*365/100^2;           % Dale 1110 mumol/(m^2 day)   -->  mumol/(cm^2 yr):     *365/100^2
+            swi.FeIII0=swi.Flux_FeIII0*(1-bsd.por)*bsd.w;       % calculate flux [mol/(cm2 yr)] according non-bioturbated flux!!!
+            
             swi.O20=300.0E-009;                                 % O2  concentration at SWI (mol/cm^3)
             swi.NO30=40.0e-9;                                   % NO3 concentration at SWI (mol/cm^3)
-            swi.Nitrogen=true;                                  % calculate N (true/false)
             swi.NH40=10.0e-9;                                 	% NH4 concentration at SWI (mol/cm^3)
-            swi.FeIII0=2.8E-005; %3.0E-006;                                % FeIII concentration at SWI (mol/cm^3) --> TODO: needs to be a flux!
+            swi.Fe20=0.0;                                       % Fe2 concentration at SWI (mol/cm^3)
             swi.SO40=2.8E-005;                                	% SO4 concentration at SWI (mol/cm^3)
             swi.H2S0=0.0;                                       % H2S concentration at SWI (mol/cm^3)
             swi.PO40=40.0e-9;                                   % PO4 concentration at SWI (mol/cm^3)
@@ -69,11 +76,14 @@ classdef benthic_test
             
             % calculate depth integrated OM degradation rates
             Cox_rate.Cox_total = res.zTOC.calcReac(0.0, res.bsd.zinf, 1, 1, res.bsd, swi, res);
-            Cox_rate.Cox_aerobic = res.zTOC.calcReac(0.0, res.zox, 1, 1, res.bsd, swi, res);
+            Cox_rate.Cox_Aerobic = res.zTOC.calcReac(0.0, res.zox, 1, 1, res.bsd, swi, res);
             if(swi.Nitrogen)
-                Cox_rate.Cox_denitr = res.zTOC.calcReac(res.zox, res.zno3, 1, 1, res.bsd, swi, res);
+                Cox_rate.Cox_Denitr = res.zTOC.calcReac(res.zox, res.zno3, 1, 1, res.bsd, swi, res);
             end
-            Cox_rate.Cox_sulfred = res.zTOC.calcReac(res.zno3, res.bsd.zinf, 1, 1, res.bsd, swi, res)
+            if(swi.Iron)
+                Cox_rate.Cox_IronIII = res.zTOC.calcReac(res.zno3, res.zfeIII, 1, 1, res.bsd, swi, res);
+            end
+            Cox_rate.Cox_SO4red = res.zTOC.calcReac(res.zno3, res.bsd.zinf, 1, 1, res.bsd, swi, res)
             
             % calculate mean OM concentration in upper x cm
             [C_10, C1_10, C2_10] = res.zTOC.calcC( 10, res.bsd, res.swi, res);
@@ -149,6 +159,7 @@ classdef benthic_test
             res.zFeIII = benthic_zFeIII(res.bsd, res.swi);
             res.zSO4 = benthic_zSO4(res.bsd, res.swi);
             res.zNH4 = benthic_zNH4(res.bsd, res.swi);
+            res.zFe2 = benthic_zFe2(res.bsd, res.swi);
             res.zH2S = benthic_zH2S(res.bsd, res.swi);
             res.zPO4_M = benthic_zPO4_M(res.bsd, res.swi);
             % with accelaration factor
@@ -189,10 +200,17 @@ classdef benthic_test
                 res.zno3=res.zox;
                 %                res.zso4=res.zox;   % for test-case with just TOC & O2
             end
-            res = res.zFeIII.calc(res.bsd, res.swi, res);
+            if(swi.Iron)
+                res = res.zFeIII.calc(res.bsd, res.swi, res);
+            else
+                res.zfeIII = res.zno3;
+            end
             res = res.zSO4.calc(res.bsd, res.swi, res);
             if(swi.Nitrogen)
                 res = res.zNH4.calc(res.bsd, res.swi, res);
+            end
+            if(swi.Iron)
+                res = res.zFe2.calc(res.bsd, res.swi, res);
             end
             res = res.zH2S.calc(res.bsd, res.swi, res);
             res = res.zPO4_M.calc(res.bsd, res.swi, res);
@@ -481,6 +499,23 @@ classdef benthic_test
                 %                ylabel('Depth (cm)')
                 %            title ('SO4 (mol/cm^3)')
 
+                %%% Fe2
+                subplot(3,2,2)
+                for i=1:length(zgrid)
+                    [Fe2(i), flxFe2(i)] = res.zFe2.calcFe2(zgrid(i), bsd, res.swi, res);
+                end
+                plot(Fe2, -zgrid, 'b')
+                hold on
+                t=xlim;         % to draw penetration depths the correct lengths
+                plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
+                plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
+                plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'y--')
+                plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
+                xlabel ('Fe2 (mol/cm^3)')
+                ylabel('Depth (cm)')
+                %            title ('Fe2 (mol/cm^3)')
+                
                 
                 %%% PO4
                 subplot(3,2,3)

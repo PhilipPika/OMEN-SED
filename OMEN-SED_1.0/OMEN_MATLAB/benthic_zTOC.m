@@ -9,8 +9,8 @@ classdef benthic_zTOC < handle
     properties
         DC1;                    % TOC diffusion coefficient (cm2/yr)
         
-        k1= 0.2;             	% TOC degradation rate constnat (1/yr)
-        k2= 0.0001;             % TOC degradation rate constant (1/yr)
+        k1= 0.02;             	% TOC degradation rate constnat (1/yr)
+        k2= 0.001;             % TOC degradation rate constant (1/yr)
         
     end
     
@@ -202,7 +202,7 @@ classdef benthic_zTOC < handle
                 PhiI2.*r.a22.*exp(r.a22.*z);
             
             else    % this is a solid / no diffusion below zbio                
-                
+            %% this is not used when using a tiny diffusion-coefficient for FeIII in the unbioturbated layer    
             e = ones(1,bsd.ncl);
             dedz = zeros(1,bsd.ncl);
             

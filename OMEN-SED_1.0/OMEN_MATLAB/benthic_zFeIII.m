@@ -2,8 +2,8 @@ classdef benthic_zFeIII
     % Solve FeIII
     
     properties
-        qdispFeIII=0.0; %0.01; %157.68;            % FeIII diffusion coefficient in water (cm2/yr)
-        adispFeIII=0.0; %0.01; %7.884;             % FeIII linear coefficient for temperature dependence (cm2/yr/oC)
+        qdispFeIII=0.0;     %157.68;            % FeIII diffusion coefficient in water (cm2/yr)
+        adispFeIII=0.0;     %7.884;             % FeIII linear coefficient for temperature dependence (cm2/yr/oC)
         DFeIII1;                      % FeIII diffusion coefficient in bioturbated layer (cm2/yr)
         DFeIII2;                      % FeIII diffusion coefficient in non-bioturbated layer (cm2/yr)
         
@@ -14,7 +14,7 @@ classdef benthic_zFeIII
     methods
         function obj = benthic_zFeIII(bsd, swi)
             obj.DFeIII1=bsd.Dbio;  	% FeIII diffusion coefficient in bioturbated layer (cm2/yr)
-            obj.DFeIII2=(obj.qdispFeIII+obj.adispFeIII*swi.T).*bsd.dispFactor;          	% FeIII diffusion coefficient in non-bioturbated layer (cm2/yr)
+            obj.DFeIII2=0.065;  %(obj.qdispFeIII+obj.adispFeIII*swi.T).*bsd.dispFactor;  %      % FeIII diffusion coefficient in non-bioturbated layer (cm2/yr) - set as very small value so I can use the GBCM to solve it
             
             %reactive terms: OM degradation
             obj.reac1=-bsd.FeIIIC;
@@ -35,7 +35,7 @@ classdef benthic_zFeIII
                 bctype = 2;
             else
                 
-                fun=@(zfeIII)-obj.calcbc(zfeIII,bsd,swi,r,1) - obj.calcFFeIII(zfeIII,bsd, swi, r);
+                fun=@(zfeIII)-obj.calcbc(zfeIII,bsd,swi,r,1);   % not needed for FeIII consumption from Fe2 from below zfeIII:  - obj.calcFFeIII(zfeIII,bsd, swi, r);
                 
                 %             % try zero flux at zinf and see if we have any FeIII left
                 %             [flxzfeIII, conczinf, flxswi,rtmp] = obj.calcbc(bsd.zinf, bsd, swi, r, 2);
@@ -48,8 +48,8 @@ classdef benthic_zFeIII
                         conczinf = 0.0;
                         funzno3=fun(r.zno3);
                         funzinf=fun(bsd.zinf);
-                        r.zfeIII=fzero(fun,[max(r.zno3, 1e-10), bsd.zbio],bsd.fzerooptions);    % Fe- reduction only in bioturbated zone assume Fe-reduction occurs just in bioturbated layer
-%                        r.zfeIII=fzero(fun,[max(r.zno3, 1e-10), bsd.zinf],bsd.fzerooptions);    % use this when diffusion <> 0, withoutdiffusion zinf does not work as fewer int. const. are used in the lowest layer 
+%                        r.zfeIII=fzero(fun,[max(r.zno3, 1e-10), bsd.zbio],bsd.fzerooptions);    % Fe- reduction only in bioturbated zone assume Fe-reduction occurs just in bioturbated layer
+                        r.zfeIII=fzero(fun,[max(r.zno3, 1e-10), bsd.zinf],bsd.fzerooptions);    % use this when diffusion <> 0, withoutdiffusion zinf does not work as fewer int. const. are used in the lowest layer 
                     end
                 else  % vectorized version
                     bctype = (conczinf < 0)*1 + (conczfeIII>=0)*2;
@@ -104,11 +104,9 @@ classdef benthic_zFeIII
 %%%%%%%%% DH 07.2020: TODO adjust here as well            
 
             % Match at zox, layer 1 - layer 2 (continuity, flux discontinuity from H2S source)
-            % flux of H2S to oxic interface (Source of FeIII)
-            % NB: include methane region as AOM will produce sulphide as well..
-            FH2S = 0.0; %r.zTOC.calcReac(r.zno3, zfeIII, bsd.FeIIIC, bsd.FeIIIC, bsd, swi, r) + 0.0; % no secondary redox!
-            
-% DH 07.2020: adjust this here:            FH2S = r.zTOC.calcReac(r.zno3, zfeIII, bsd.FeIIIC, bsd.FeIIIC, bsd, swi, r) ... % MULTIPLY BY 1/POR ????
+            % flux of Fe2 to oxic interface (Source of FeIII)
+%            FH2S = 0.0; %r.zTOC.calcReac(r.zno3, zfeIII, bsd.FeIIIC, bsd.FeIIIC, bsd, swi, r) + 0.0; % no secondary redox!          
+            FH2S = r.zTOC.calcReac(r.zno3, zfeIII, bsd.FeIIIC, bsd.FeIIIC, bsd, swi, r);
 %                + bsd.gammaCH4.*r.zTOC.calcReac(zfeIII, bsd.zinf, bsd.MC, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
             % basis functions at bottom of layer 1
             [ e1_zox, dedz1_zox, f1_zox, dfdz1_zox, g1_zox, dgdz1_zox] ...
@@ -125,8 +123,9 @@ classdef benthic_zFeIII
             
             [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
                 e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
-                0, -r.zxf.*bsd.gammaH2S*(1-bsd.gammaFeS)*FH2S./D);
-            % Dom 09.02.2016: is there a ...*gammaH2S*FH2S... missing?
+                0, -r.zxf.*bsd.gammaFe2*FH2S./D);
+% with pyrite:  0, -r.zxf.*bsd.gammaH2S*(1-bsd.gammaFeS)*FH2S./D);
+
             % Solution at swi, top of layer 1
             [ e1_0, dedz1_0, f1_0, dfdz1_0, g1_0, dgdz1_0] ...
                 = r.zTOC.calcfg_l12(0, bsd, swi, r, 0 , 0 , 0, rFeIII.ls1);
@@ -163,7 +162,7 @@ classdef benthic_zFeIII
 %             rFeIII.B3 = 0.0;        % (bctype==1).*bctype1_B3 + (bctype==2).*bctype2_B3;
             
             % calculate conc and flux at zfeIII
-             conczfeIII = rFeIII.A3.*e3_zfeIII+rFeIII.B3.*f3_zfeIII + g3_zfeIII;
+            conczfeIII = rFeIII.A3.*e3_zfeIII+rFeIII.B3.*f3_zfeIII + g3_zfeIII;
             D = (zfeIII <= bsd.zbio).*obj.DFeIII1 + (zfeIII > bsd.zbio).*obj.DFeIII2;
             flxzfeIII = D.*(rFeIII.A3.*dedz3_zfeIII+rFeIII.B3.*dfdz3_zfeIII + dgdz3_zfeIII);        % includes 1/por ie flux per (cm^2 pore area)
             
