@@ -16,7 +16,7 @@ classdef benthic_main < handle
         
         %sediment characteristics
         rho_sed=2.5;                            % sediment density (g/cm3)
-        wdepth=100.0;                           % water depth (m)
+        wdepth=350.0;                           % water depth (m)
         w;                                      % burial velocity  (cm/yr) - calculated by internal fct. sedrate()
         z0  = 0;                                % surface
         zbio=10.0;                              % bioturbation depth (cm)
@@ -46,7 +46,7 @@ classdef benthic_main < handle
         MC;                                     % CH4/C (mol/mol)
         gamma=0.95;                           	% fraction of NH4 that is oxidised in oxic layer
         gammaH2S=0.95;                         	% fraction of H2S that is oxidised in oxic layer
-        gammaFe2=0.0;                          % fraction of Fe2 that is oxidised in oxic layer (to be calculated with Seb's fit to Cox and BW [O2])
+        gammaFe2=0.0;                           % fraction of Fe2 that is oxidised in oxic layer (to be calculated with Seb's fit to Cox and BW [O2])
         gammaFeS=0.0;                         	% fraction of H2S that is precipitated as pyrite
         gammaCH4=0.99;                         	% fraction of CH4 that is oxidised at SO4
         satSO4=0.0;                           	% SO4 saturation
@@ -139,7 +139,16 @@ classdef benthic_main < handle
         
         function w = sedrate(wdepth)
             % sedimentation rate, cm/yr (after Middelburg et al. (1997)) 
-            w = 10.0.^(-0.87478367-0.00043512*wdepth)*3.3;
+            w_Middelburg = 10.0.^(-0.87478367-0.00043512*wdepth)*3.3;
+            % sedimentation rate, cm/yr (after Burwicz et al. (2011)) 
+            w1 = 0.117;
+            w2 = 0.006;
+            z1 = 200;
+            z2 = 4000;
+            c1 = 3;
+            c2 = 10;
+            w = w1/(1+(wdepth/z1)^c1) + w2/(1+(wdepth/z2)^c2);
+            w = 60/1000;    % To compare with Dale et al. (2015)
         end
         
         function Dbio = biorate(wdepth)

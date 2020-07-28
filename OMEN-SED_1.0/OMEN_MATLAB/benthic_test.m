@@ -31,12 +31,14 @@ classdef benthic_test
             swi.Iron=true;                                      % calculate Fe (true/false)
 
 % WITH TOC CONCENTRATION
-            swi.C01nonbio= 1.0*1e-2/12*bsd.rho_sed;            % TOC concentration at SWI (wt%) -> (mol/cm^3 bulk phase)
-            swi.C02nonbio= 1.0*1e-2/12*bsd.rho_sed;            % TOC concentration at SWI (wt%) -> (mol/cm^3 bulk phase)
-            swi.Fnonbio1 = swi.C01nonbio*(1-bsd.por)*bsd.w;    % calculate flux [mol/(cm2 yr)] according non-bioturbated flux
-            swi.Fnonbio2 = swi.C02nonbio*(1-bsd.por)*bsd.w;    % calculate flux [mol/(cm2 yr)] according non-bioturbated flux
-            swi.C01 = swi.C01nonbio;                           % resulting bioturbated SWI-concentration, to be calculated in benthic_zTOC.m
-            swi.C02 = swi.C02nonbio;                           % resulting bioturbated SWI-concentration, to be calculated in benthic_zTOC.m
+            swi.C01_wtprc = 1.1;                                % TOC1 concentration at SWI (wt%)
+            swi.C02_wtprc = 0.5;                                % TOC2 concentration at SWI (wt%)
+            swi.C01nonbio= swi.C01_wtprc*1e-2/12*bsd.rho_sed;             % TOC concentration at SWI (wt%) -> (mol/cm^3 bulk phase)
+            swi.C02nonbio= swi.C02_wtprc*1e-2/12*bsd.rho_sed;             % TOC concentration at SWI (wt%) -> (mol/cm^3 bulk phase)
+            swi.Fnonbio1 = swi.C01nonbio*(1-bsd.por)*bsd.w;     % Dale: 1.460E-04/2; %    % calculate flux [mol/(cm2 yr)] according non-bioturbated flux
+            swi.Fnonbio2 = swi.C02nonbio*(1-bsd.por)*bsd.w;     % Dale: 1.460E-04/2;  %   % calculate flux [mol/(cm2 yr)] according non-bioturbated flux
+            swi.C01 = swi.C01nonbio;                            % resulting bioturbated SWI-concentration, to be calculated in benthic_zTOC.m
+            swi.C02 = swi.C02nonbio;                            % resulting bioturbated SWI-concentration, to be calculated in benthic_zTOC.m
 % WITH TOC FLUX
 %            swi.Fnonbio1 = 6.0E-005;    % calculate flux [mol/(cm2 yr)] according non-bioturbated flux
 %            swi.Fnonbio2 = 2.8E-006;    % calculate flux [mol/(cm2 yr)] according non-bioturbated flux
@@ -46,10 +48,11 @@ classdef benthic_test
 %            swi.C02 = swi.C02nonbio;                           % resulting bioturbated SWI-concentration, to be calculated in benthic_zTOC.m
 
 %            swi.FeIII0=2.8E-005; %3.0E-006;                   	% FeIII concentration at SWI (mol/cm^3) --> TODO: needs to be a flux!
-            swi.Flux_FeIII0 =  1110.0E-006*365/100^2;           % Dale 1110 mumol/(m^2 day)   -->  mumol/(cm^2 yr):     *365/100^2
-            swi.FeIII0=swi.Flux_FeIII0*(1-bsd.por)*bsd.w;       % calculate flux [mol/(cm2 yr)] according non-bioturbated flux!!!
+            Fe_influx = 0.1667*1110.0E-006;                     % FeIII influx from Dale but just 16.67% is available for DIR (See his Tab. 2, footnote d)
+            swi.Flux_FeIII0 =  (Fe_influx)*365/100^2;           % Dale 1110 mumol/(m^2 day)   -->  mumol/(cm^2 yr):     *365/100^2
+            swi.FeIII0=swi.Flux_FeIII0/((1-bsd.por)*bsd.w);     % calculate flux [mol/(cm2 yr)] according non-bioturbated flux!!!
             
-            swi.O20=300.0E-009;                                 % O2  concentration at SWI (mol/cm^3)
+            swi.O20=100.0E-009;                                 % O2  concentration at SWI (mol/cm^3)
             swi.NO30=40.0e-9;                                   % NO3 concentration at SWI (mol/cm^3)
             swi.NH40=10.0e-9;                                 	% NH4 concentration at SWI (mol/cm^3)
             swi.Fe20=0.0;                                       % Fe2 concentration at SWI (mol/cm^3)

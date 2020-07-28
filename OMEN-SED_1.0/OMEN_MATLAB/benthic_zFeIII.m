@@ -60,7 +60,7 @@ classdef benthic_zFeIII
             end
             [flxzfeIII, conczfeIII, flxswiFeIII, r] = obj.calcbc(r.zfeIII, bsd, swi, r, bctype);    % Dom18.05.2016: not necessary for bctype 2 (done in line 32 already)
             
-            flxswiFeIII = flxswiFeIII - bsd.por.*bsd.w.*(swi.FeIII0-conczinf);
+            flxswiFeIII = flxswiFeIII - (1-bsd.por).*bsd.w.*(swi.FeIII0-conczinf);
             if(abs(flxswiFeIII) <= bsd.tol_const)
                 flxswiFeIII = 0.0
             end
@@ -168,7 +168,7 @@ classdef benthic_zFeIII
             
             % flux at swi - DO include por so this is per cm^2 water column area
             % DH: added advective flux 28.05.2016
-            flxswi = bsd.por.*(obj.DFeIII1.*(rFeIII.A3.*dedz1_0+rFeIII.B3.*dfdz1_0 + dgdz1_0)); % - bsd.w.*swi.FeIII0);   % NB: use A3, B3 as these are _xformed_ layer 1 basis functions
+            flxswi = (1-bsd.por).*(obj.DFeIII1.*(rFeIII.A3.*dedz1_0+rFeIII.B3.*dfdz1_0 + dgdz1_0)); % - bsd.w.*swi.FeIII0);   % NB: use A3, B3 as these are _xformed_ layer 1 basis functions
             
             % save coeffs for layers 2 and 1
             rFeIII.A2 = zno3.a.*rFeIII.A3 + zno3.b.*rFeIII.B3 + zno3.e;
@@ -186,11 +186,11 @@ classdef benthic_zFeIII
         function FFeIII = calcFFeIII(obj, zfeIII, bsd, swi, r)
             % Calculate FeIII consumption below zfeIII, by organic matter and indirectly via methane oxidation
             
-            tmpreac1    = bsd.MC.*bsd.gammaCH4;
-            tmpreac2    = bsd.MC.*bsd.gammaCH4;
-            %            FFeIII = 0.0;    % no secondary redox!
-            FFeIII = r.zTOC.calcReac(zfeIII, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);
-            % TODO confirm (1-bsd.por)*  has been added (to k1 & k2 ?)
+%             tmpreac1    = bsd.MC.*bsd.gammaCH4;
+%             tmpreac2    = bsd.MC.*bsd.gammaCH4;
+%             FFeIII = r.zTOC.calcReac(zfeIII, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);
+            FFeIII = 0.0;    % no secondary redox!
+
         end
         
         
