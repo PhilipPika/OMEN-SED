@@ -20,7 +20,7 @@ classdef benthic_main < handle
         w;                                      % burial velocity  (cm/yr) - calculated by internal fct. sedrate()
         z0  = 0;                                % surface
         zbio=10.0;                              % bioturbation depth (cm)
-        zinf=100;                               %Inifinity (cm)
+        zinf=30;                               %Inifinity (cm)
         loc_BW_O2_anoxia=20E-009;
         Dbio;                                   % bioturbation coefficient (cm2/yr) - calculated by internal fct. biorate()
         por=0.85;                               % porosity (-)

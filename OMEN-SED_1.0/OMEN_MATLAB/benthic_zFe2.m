@@ -2,10 +2,12 @@ classdef benthic_zFe2
     % Solve Fe2
     
     properties
-        qdispFe2=307.476;           % Fe2 diffusion coefficient in water (cm2/yr)
-        adispFe2=9.636;             % Fe2 linear coefficient for temperature dependence (cm2/yr/oC)
+        qdispFe2=107.538;  % 307.476; %        % Fe2 diffusion coefficient in water (cm2/yr)
+        adispFe2=4.768; % 9.636;  %           % Fe2 linear coefficient for temperature dependence (cm2/yr/oC)
         DFe21;                      % Fe2 diffusion coefficient in bioturbated layer (cm2/yr)
         DFe22;                      % Fe2 diffusion coefficient in non-bioturbated layer (cm2/yr)
+        FeIrr_scale=1.0;            % Irrigation of Fe2+ is scaled to 20% compared to other solutes due to its high affinity for oxidation on burrow walls
+
         
         reac1;
         reac2;
@@ -13,12 +15,12 @@ classdef benthic_zFe2
     
     methods
         function obj = benthic_zFe2(bsd, swi)
-            obj.DFe21=(obj.qdispFe2+obj.adispFe2*swi.T).*bsd.dispFactor+bsd.Dbio;  	% Fe2 diffusion coefficient in bioturbated layer (cm2/yr)
-            obj.DFe22=(obj.qdispFe2+obj.adispFe2*swi.T).*bsd.dispFactor;          	% Fe2 diffusion coefficient in non-bioturbated layer (cm2/yr)
+            obj.DFe21=(obj.qdispFe2+obj.adispFe2*swi.T).*bsd.dispFactor.*obj.FeIrr_scale+bsd.Dbio;  	% Fe2 diffusion coefficient in bioturbated layer (cm2/yr)
+            obj.DFe22=(obj.qdispFe2+obj.adispFe2*swi.T).*bsd.dispFactor.*obj.FeIrr_scale;          	% Fe2 diffusion coefficient in non-bioturbated layer (cm2/yr)
             
             %reactive terms: OM degradation
-            obj.reac1=bsd.FeIIIC;
-            obj.reac2=bsd.FeIIIC;
+            obj.reac1=bsd.FeIIIC*bsd.SD;
+            obj.reac2=bsd.FeIIIC*bsd.SD;
             
         end
         
