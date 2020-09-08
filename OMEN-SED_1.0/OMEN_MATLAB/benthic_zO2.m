@@ -73,17 +73,29 @@ classdef benthic_zO2
         
         function [flxzox, conczox, flxswi,r] = calcbc(obj, zox, bsd, swi, r, bctype)
             % calculate solution for given zox
-            
-            % Preparation: sort out solution-matching across bioturbation boundary (if necessary)
-            rO2.ls = r.zTOC.prepfg_l12(bsd, swi, r, obj.reac1, obj.reac2, 0, bsd.z0, zox, obj.DO21, obj.DO22);
-            
-            % basis functions at upper boundary
-            [ e_0, dedz_0, f_0, dfdz_0, g_0, dgdz_0] ...
-                = r.zTOC.calcfg_l12(bsd.z0, bsd, swi, r, obj.reac1, obj.reac2, 0, rO2.ls);
-            % ... and lower boundary
-            [ e_zox, dedz_zox, f_zox, dfdz_zox, g_zox, dgdz_zox] ...
-                = r.zTOC.calcfg_l12(zox, bsd, swi, r, obj.reac1, obj.reac2, 0, rO2.ls);
-            
+            if(swi.TwoG_OM_model)
+                % Preparation: sort out solution-matching across bioturbation boundary (if necessary)
+                rO2.ls = r.zTOC.prepfg_l12(bsd, swi, r, obj.reac1, obj.reac2, 0, bsd.z0, zox, obj.DO21, obj.DO22);
+                
+                % basis functions at upper boundary
+                [ e_0, dedz_0, f_0, dfdz_0, g_0, dgdz_0] ...
+                    = r.zTOC.calcfg_l12(bsd.z0, bsd, swi, r, obj.reac1, obj.reac2, 0, rO2.ls);
+                % ... and lower boundary
+                [ e_zox, dedz_zox, f_zox, dfdz_zox, g_zox, dgdz_zox] ...
+                    = r.zTOC.calcfg_l12(zox, bsd, swi, r, obj.reac1, obj.reac2, 0, rO2.ls);
+            else
+                % Preparation: sort out solution-matching across bioturbation boundary (if necessary)
+                rO2.ls = r.zTOC_RCM.prepfg_l12(bsd, swi, r, obj.reac1, 0, bsd.z0, zox, obj.DO21, obj.DO22);
+                
+                % basis functions at upper boundary
+                [ e_0, dedz_0, f_0, dfdz_0, g_0, dgdz_0] ...
+                    = r.zTOC_RCM.calcfg_l12(bsd.z0, bsd, swi, r, obj.reac1, 0, rO2.ls);
+                % ... and lower boundary
+                [ e_zox, dedz_zox, f_zox, dfdz_zox, g_zox, dgdz_zox] ...
+                    = r.zTOC_RCM.calcfg_l12(zox, bsd, swi, r, obj.reac1, 0, rO2.ls);
+                
+                
+            end
             
             
             % Solve for AO2, BO2 given boundary conditions (expressed in terms of transformed soln)
@@ -133,57 +145,72 @@ classdef benthic_zO2
             %FLUX of NH4 and Reduced species from ZOX to ZINF
             
             %            FO2 = 0.0; % no secondary redox!
-            FO2 = zox./(bsd.zoxgf + zox).*r.zTOC.calcReac(zox, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);
-            % NB (1-bsd.por)/bsd.por  has been included in OC etc stoich factors, so this is flux / cm^2 pore area
-            
-        end
-        
-        function FO2 = calcFO2_exact(obj, zox, bsd, swi, r)
-            % Oxydation of reduced species at zox (CALCULATED WITH ACTUAL PENETRATION DEPTHS)
-            
-            tmpreac1_N=2*bsd.gamma*bsd.NC1;
-            tmpreac2_N=2*bsd.gamma*bsd.NC2;
-            tmpreac1_S=bsd.O2H2S*bsd.SO4C;
-            tmpreac2_S=bsd.O2H2S*bsd.SO4C;
-            
-            %tmpreac1=bsd.OC+2*bsd.gamma*bsd.NC1;
-            %tmpreac2=bsd.OC+2*bsd.gamma*bsd.NC2;
-            %FLUX of NH4 and Reduced species from ZOX to ZINF
-            
-            
-            FO2 = zox./(bsd.zoxgf + zox).*(r.zTOC.calcReac(r.zno3, bsd.zinf, tmpreac1_N, tmpreac2_N, bsd, swi, r) ...
-                + r.zTOC.calcReac(r.zno3, r.zso4, tmpreac1_S, tmpreac2_S, bsd, swi, r));
-            % NB (1-bsd.por)/bsd.por  has been included in OC etc stoich factors, so this is flux / cm^2 pore area
-            
-        end
-        
-        function [O2, flxO2, flxO2D, flxO2adv] = calcO2(obj, z, bsd, swi, r)
-            % Calculate O2 conc and flux at depth z from solution
-            if z <= r.zox    % <= so handle case of fully oxic with zox = zinf
-                % basis functions at z
-                [ e, dedz, f, dfdz, g, dgdz] ...
-                    = r.zTOC.calcfg_l12(z, bsd, swi, r, obj.reac1, obj.reac2, 0, r.rO2.ls);
-                if z < bsd.zbio  % < so handle zbio = 0
-                    D = obj.DO21;
-                else
-                    D = obj.DO22;
-                end
-                
-                O2 = r.rO2.AO2.*e + r.rO2.BO2.*f + g;
-                flxO2D = bsd.por.*D.*(r.rO2.AO2.*dedz+r.rO2.BO2.*dfdz + dgdz); % diffusive component
-                flxO2adv = - bsd.por.*bsd.w*O2;                                % advective component
-                flxO2 = flxO2D + flxO2adv;                                     % total
-                
+            if(swi.TwoG_OM_model)
+                FO2 = zox./(bsd.zoxgf + zox).*r.zTOC.calcReac(zox, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);
             else
-                O2 = 0;
-                flxO2 = 0;
-                flxO2D = 0;
-                flxO2adv = 0;
+                FO2 = zox./(bsd.zoxgf + zox).*r.zTOC_RCM.calcReac(zox, bsd.zinf, tmpreac1, bsd, swi, r);
+                
             end
+            % NB (1-bsd.por)/bsd.por  has been included in OC etc stoich factors, so this is flux / cm^2 pore area
+            
         end
-        
+    
+    function FO2 = calcFO2_exact(obj, zox, bsd, swi, r)
+    % Oxydation of reduced species at zox (CALCULATED WITH ACTUAL PENETRATION DEPTHS)
+    
+    tmpreac1_N=2*bsd.gamma*bsd.NC1;
+    tmpreac2_N=2*bsd.gamma*bsd.NC2;
+    tmpreac1_S=bsd.O2H2S*bsd.SO4C;
+    tmpreac2_S=bsd.O2H2S*bsd.SO4C;
+    
+    %tmpreac1=bsd.OC+2*bsd.gamma*bsd.NC1;
+    %tmpreac2=bsd.OC+2*bsd.gamma*bsd.NC2;
+    %FLUX of NH4 and Reduced species from ZOX to ZINF
+    
+    if(swi.TwoG_OM_model)
+        FO2 = zox./(bsd.zoxgf + zox).*(r.zTOC.calcReac(r.zno3, bsd.zinf, tmpreac1_N, tmpreac2_N, bsd, swi, r) ...
+            + r.zTOC.calcReac(r.zno3, r.zso4, tmpreac1_S, tmpreac2_S, bsd, swi, r));
+        % NB (1-bsd.por)/bsd.por  has been included in OC etc stoich factors, so this is flux / cm^2 pore area
+    else
+        FO2 = zox./(bsd.zoxgf + zox).*(r.zTOC_RCM.calcReac(r.zno3, bsd.zinf, tmpreac1_N, bsd, swi, r) ...
+            + r.zTOC_RCM.calcReac(r.zno3, r.zso4, tmpreac1_S, bsd, swi, r));
+        % NB (1-bsd.por)/bsd.por  has been included in OC etc stoich factors, so this is flux / cm^2 pore area
         
     end
+    end
     
+    function [O2, flxO2, flxO2D, flxO2adv] = calcO2(obj, z, bsd, swi, r)
+    % Calculate O2 conc and flux at depth z from solution
+    if z <= r.zox    % <= so handle case of fully oxic with zox = zinf
+        % basis functions at z
+        if(swi.TwoG_OM_model)
+            [ e, dedz, f, dfdz, g, dgdz] ...
+                = r.zTOC.calcfg_l12(z, bsd, swi, r, obj.reac1, obj.reac2, 0, r.rO2.ls);
+        else
+            [ e, dedz, f, dfdz, g, dgdz] ...
+                = r.zTOC_RCM.calcfg_l12(z, bsd, swi, r, obj.reac1, 0, r.rO2.ls);
+        end
+        if z < bsd.zbio  % < so handle zbio = 0
+            D = obj.DO21;
+        else
+            D = obj.DO22;
+        end
+        
+        O2 = r.rO2.AO2.*e + r.rO2.BO2.*f + g;
+        flxO2D = bsd.por.*D.*(r.rO2.AO2.*dedz+r.rO2.BO2.*dfdz + dgdz); % diffusive component
+        flxO2adv = - bsd.por.*bsd.w*O2;                                % advective component
+        flxO2 = flxO2D + flxO2adv;                                     % total
+        
+    else
+        O2 = 0;
+        flxO2 = 0;
+        flxO2D = 0;
+        flxO2adv = 0;
+    end
+    end
+    
+    
+end
+
 end
 
