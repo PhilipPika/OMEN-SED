@@ -324,8 +324,8 @@ classdef benthic_test
                 else
                     subplot(3,2,1)
                     for i=1:length(zgrid)
-                        [C(i), C1(i,:)] = res.zTOC.calcC( zgrid(i), bsd, res.swi, res);
-                        [Cflx(i), C1flx(i,:)] = res.zTOC.calcCflx( zgrid(i), bsd, res.swi, res);
+                        [C(i), C1(i,:)] = res.zTOC_RCM.calcC( zgrid(i), bsd, res.swi, res);
+                        [Cflx(i), C1flx(i,:)] = res.zTOC_RCM.calcCflx( zgrid(i), bsd, res.swi, res);
                     end
                     % Plot TOC fractions with colorpalette linspecer
                     %                 color = linspecer(swi.nG);
@@ -473,8 +473,8 @@ classdef benthic_test
                 else
                     subplot(2,2,1)
                     for i=1:length(zgrid)
-                        [C(i), C1(i,:)] = res.zTOC.calcC( zgrid(i), bsd, res.swi, res);
-                        [Cflx(i), C1flx(i,:)] = res.zTOC.calcCflx( zgrid(i), bsd, res.swi, res);
+                        [C(i), C1(i,:)] = res.zTOC_RCM.calcC( zgrid(i), bsd, res.swi, res);
+                        [Cflx(i), C1flx(i,:)] = res.zTOC_RCM.calcCflx( zgrid(i), bsd, res.swi, res);
                     end
                     % Plot TOC fractions with colorpalette linspecer
                     color = linspecer(swi.nG);
@@ -747,8 +747,8 @@ classdef benthic_test
                 else
                     subplot(3,4,1)
                     for i=1:length(zgrid)
-                        [C(i), C1(i,:)] = res.zTOC.calcC( zgrid(i), bsd, res.swi, res);
-                        [Cflx(i), C1flx(i,:)] = res.zTOC.calcCflx( zgrid(i), bsd, res.swi, res);
+                        [C(i), C1(i,:)] = res.zTOC_RCM.calcC( zgrid(i), bsd, res.swi, res);
+                        [Cflx(i), C1flx(i,:)] = res.zTOC_RCM.calcCflx( zgrid(i), bsd, res.swi, res);
                     end
                     % Plot TOC fractions with colorpalette linspecer
                     color = linspecer(swi.nG);
@@ -909,8 +909,8 @@ classdef benthic_test
             
             %%% TOC
             for i=1:length(zgrid)
-                [C(i), C1(i,:)] = res.zTOC.calcC( zgrid(i), bsd, res.swi, res);
-                [Cflx(i), C1flx(i,:)] = res.zTOC.calcCflx( zgrid(i), bsd, res.swi, res);
+                [C(i), C1(i,:)] = res.zTOC_RCM.calcC( zgrid(i), bsd, res.swi, res);
+                [Cflx(i), C1flx(i,:)] = res.zTOC_RCM.calcCflx( zgrid(i), bsd, res.swi, res);
             end
             % Plot TOC fractions with colorpalette linspecer
             subplot(121)
@@ -955,8 +955,8 @@ classdef benthic_test
                 %%% TOC
                 subplot(1,2,1)
                 for i=1:length(zgrid)
-                    [C(i), C1(i,:)] = res.zTOC.calcC( zgrid(i), bsd, res.swi, res);
-                    [Cflx(i), C1flx(i,:)] = res.zTOC.calcCflx( zgrid(i), bsd, res.swi, res);
+                    [C(i), C1(i,:)] = res.zTOC_RCM.calcC( zgrid(i), bsd, res.swi, res);
+                    [Cflx(i), C1flx(i,:)] = res.zTOC_RCM.calcCflx( zgrid(i), bsd, res.swi, res);
                 end
                 % Plot TOC fractions with colorpalette linspecer
                 color = linspecer(swi.nG);
