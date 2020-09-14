@@ -69,47 +69,87 @@ classdef benthic_zNO3
         function [flxzno3, conczno3, flxswi,r] = calcbc(obj, zno3, bsd, swi, r, bctype)
             % Calculate trial solution for given zno3, matching boundary conditions from layer-by-layer solutions
             
-            
-            % Preparation: for each layer, sort out solution - matching across bioturbation boundary (if necessary)
-            % layer 1: 0 < z < zox, nitrification
-            %      ls =      prepfg_l12( bsd, swi, r, reac1,            reac2,             ktemp, zU, zL, D1,        D2)
-            rNO3.ls1 = r.zTOC.prepfg_l12(bsd, swi, r, bsd.gamma.*bsd.NC1,bsd.gamma.*bsd.NC2,  0,  0, r.zox, obj.DN1, obj.DN2);
-            % layer 2: zox < z < zno3, denitrification
-            rNO3.ls2 = r.zTOC.prepfg_l12(bsd, swi, r, -bsd.NO3CR,       -bsd.NO3CR,         0,  r.zox, zno3, obj.DN1, obj.DN2);
-            
-            
-            % Work up from the bottom, matching solutions at boundaries
-            % Basis functions at bottom of layer 2 zno3
-            
-            [ e2_zno3, dedz2_zno3, f2_zno3, dfdz2_zno3, g2_zno3, dgdz2_zno3] ...
-                = r.zTOC.calcfg_l12(zno3, bsd, swi, r,     -bsd.NO3CR,       -bsd.NO3CR, 0, rNO3.ls2);
-            
-            
-            % Match at zox, layer 1 - layer 2 (continuity, flux discontinuity from NH4 -> NO3 source)
-            
-            % basis functions at bottom of layer 1
-            [ e1_zox, dedz1_zox, f1_zox, dfdz1_zox, g1_zox, dgdz1_zox] ...
-                = r.zTOC.calcfg_l12(r.zox, bsd, swi, r, bsd.gamma.*bsd.NC1,bsd.gamma.*bsd.NC2, 0, rNO3.ls1);
-            % basis functions at top of layer 2
-            [ e2_zox, dedz2_zox, f2_zox, dfdz2_zox, g2_zox, dgdz2_zox] ...
-                = r.zTOC.calcfg_l12(r.zox, bsd, swi, r, -bsd.NO3CR,       -bsd.NO3CR, 0, rNO3.ls2);
-            
-            %flux of NH4 to zox  TODO NH4 production by denitrification?
-            FNH4 = r.zTOC.calcReac(zno3, bsd.zinf, bsd.NC1/(1+obj.KNH4), bsd.NC2/(1+obj.KNH4), bsd, swi, r); % MULTIPLY BY 1/POR ????
-            % match solutions at zox - continuous concentration, flux discontinuity from H2S ox
-            D = (r.zox <= bsd.zbio).*obj.DN1 + (r.zox > bsd.zbio).*obj.DN2;
-            
-            [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
-                e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
-                0, -r.zxf.*bsd.gamma.*FNH4./D);
-            
-            % Solution at swi, top of layer 1
-            [ e1_0, dedz1_0, f1_0, dfdz1_0, g1_0, dgdz1_0] ...
-                = r.zTOC.calcfg_l12(0, bsd, swi, r, bsd.gamma.*bsd.NC1,bsd.gamma.*bsd.NC2, 0, rNO3.ls1);
-            % transform to use coeffs from l2
-            [ e1_0, f1_0, g1_0, dedz1_0,  dfdz1_0, dgdz1_0]= benthic_utils.xformsoln(e1_0, f1_0, g1_0, dedz1_0, dfdz1_0, dgdz1_0, ...
-                zox.a , zox.b , zox.c , zox.d , zox.e ,zox.f);
-            
+            if(swi.TwoG_OM_model)
+                % Preparation: for each layer, sort out solution - matching across bioturbation boundary (if necessary)
+                % layer 1: 0 < z < zox, nitrification
+                %      ls =      prepfg_l12( bsd, swi, r, reac1,            reac2,             ktemp, zU, zL, D1,        D2)
+                rNO3.ls1 = r.zTOC.prepfg_l12(bsd, swi, r, bsd.gamma.*bsd.NC1,bsd.gamma.*bsd.NC2,  0,  0, r.zox, obj.DN1, obj.DN2);
+                % layer 2: zox < z < zno3, denitrification
+                rNO3.ls2 = r.zTOC.prepfg_l12(bsd, swi, r, -bsd.NO3CR,       -bsd.NO3CR,         0,  r.zox, zno3, obj.DN1, obj.DN2);
+                
+                
+                % Work up from the bottom, matching solutions at boundaries
+                % Basis functions at bottom of layer 2 zno3
+                
+                [ e2_zno3, dedz2_zno3, f2_zno3, dfdz2_zno3, g2_zno3, dgdz2_zno3] ...
+                    = r.zTOC.calcfg_l12(zno3, bsd, swi, r,     -bsd.NO3CR,       -bsd.NO3CR, 0, rNO3.ls2);
+                
+                
+                % Match at zox, layer 1 - layer 2 (continuity, flux discontinuity from NH4 -> NO3 source)
+                
+                % basis functions at bottom of layer 1
+                [ e1_zox, dedz1_zox, f1_zox, dfdz1_zox, g1_zox, dgdz1_zox] ...
+                    = r.zTOC.calcfg_l12(r.zox, bsd, swi, r, bsd.gamma.*bsd.NC1,bsd.gamma.*bsd.NC2, 0, rNO3.ls1);
+                % basis functions at top of layer 2
+                [ e2_zox, dedz2_zox, f2_zox, dfdz2_zox, g2_zox, dgdz2_zox] ...
+                    = r.zTOC.calcfg_l12(r.zox, bsd, swi, r, -bsd.NO3CR,       -bsd.NO3CR, 0, rNO3.ls2);
+                
+                %flux of NH4 to zox  TODO NH4 production by denitrification?
+                FNH4 = r.zTOC.calcReac(zno3, bsd.zinf, bsd.NC1/(1+obj.KNH4), bsd.NC2/(1+obj.KNH4), bsd, swi, r); % MULTIPLY BY 1/POR ????
+                % match solutions at zox - continuous concentration, flux discontinuity from H2S ox
+                D = (r.zox <= bsd.zbio).*obj.DN1 + (r.zox > bsd.zbio).*obj.DN2;
+                
+                [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
+                    e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
+                    0, -r.zxf.*bsd.gamma.*FNH4./D);
+                
+                % Solution at swi, top of layer 1
+                [ e1_0, dedz1_0, f1_0, dfdz1_0, g1_0, dgdz1_0] ...
+                    = r.zTOC.calcfg_l12(0, bsd, swi, r, bsd.gamma.*bsd.NC1,bsd.gamma.*bsd.NC2, 0, rNO3.ls1);
+                % transform to use coeffs from l2
+                [ e1_0, f1_0, g1_0, dedz1_0,  dfdz1_0, dgdz1_0]= benthic_utils.xformsoln(e1_0, f1_0, g1_0, dedz1_0, dfdz1_0, dgdz1_0, ...
+                    zox.a , zox.b , zox.c , zox.d , zox.e ,zox.f);
+            else
+                % Preparation: for each layer, sort out solution - matching across bioturbation boundary (if necessary)
+                % layer 1: 0 < z < zox, nitrification
+                rNO3.ls1 = r.zTOC_RCM.prepfg_l12(bsd, swi, r, bsd.gamma.*bsd.NC1,  0,  0, r.zox, obj.DN1, obj.DN2);
+                % layer 2: zox < z < zno3, denitrification
+                rNO3.ls2 = r.zTOC_RCM.prepfg_l12(bsd, swi, r, -bsd.NO3CR        ,  0,  r.zox, zno3, obj.DN1, obj.DN2);
+                
+                
+                % Work up from the bottom, matching solutions at boundaries
+                % Basis functions at bottom of layer 2 zno3
+                
+                [ e2_zno3, dedz2_zno3, f2_zno3, dfdz2_zno3, g2_zno3, dgdz2_zno3] ...
+                    = r.zTOC_RCM.calcfg_l12(zno3, bsd, swi, r,     -bsd.NO3CR   , 0, rNO3.ls2);
+                
+                
+                % Match at zox, layer 1 - layer 2 (continuity, flux discontinuity from NH4 -> NO3 source)
+                
+                % basis functions at bottom of layer 1
+                [ e1_zox, dedz1_zox, f1_zox, dfdz1_zox, g1_zox, dgdz1_zox] ...
+                    = r.zTOC_RCM.calcfg_l12(r.zox, bsd, swi, r, bsd.gamma.*bsd.NC1, 0, rNO3.ls1);
+                % basis functions at top of layer 2
+                [ e2_zox, dedz2_zox, f2_zox, dfdz2_zox, g2_zox, dgdz2_zox] ...
+                    = r.zTOC_RCM.calcfg_l12(r.zox, bsd, swi, r, -bsd.NO3CR        , 0, rNO3.ls2);
+                
+                %flux of NH4 to zox  TODO NH4 production by denitrification?
+                FNH4 = r.zTOC_RCM.calcReac(zno3, bsd.zinf, bsd.NC1/(1+obj.KNH4) ,  bsd, swi, r); % MULTIPLY BY 1/POR ????
+                % match solutions at zox - continuous concentration, flux discontinuity from H2S ox
+                D = (r.zox <= bsd.zbio).*obj.DN1 + (r.zox > bsd.zbio).*obj.DN2;
+                
+                [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
+                    e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
+                    0, -r.zxf.*bsd.gamma.*FNH4./D);
+                
+                % Solution at swi, top of layer 1
+                [ e1_0, dedz1_0, f1_0, dfdz1_0, g1_0, dgdz1_0] ...
+                    = r.zTOC_RCM.calcfg_l12(0, bsd, swi, r, bsd.gamma.*bsd.NC1, 0, rNO3.ls1);
+                % transform to use coeffs from l2
+                [ e1_0, f1_0, g1_0, dedz1_0,  dfdz1_0, dgdz1_0]= benthic_utils.xformsoln(e1_0, f1_0, g1_0, dedz1_0, dfdz1_0, dgdz1_0, ...
+                    zox.a , zox.b , zox.c , zox.d , zox.e ,zox.f);
+                
+            end
             
             % Solve for ANO3, BNO3 given boundary conditions (expressed in terms of transformed basis fns, layer 2 A, B)
             
@@ -160,15 +200,27 @@ classdef benthic_zNO3
                 else
                     D = obj.DN2;
                 end
-                
-                if z <= r.zox   % layer 1
-                    [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC.calcfg_l12(z, bsd, swi, r, bsd.gamma.*bsd.NC1,bsd.gamma.*bsd.NC2 , 0, rNO3.ls1);
-                    NO3     = r.rNO3.A1.*e + r.rNO3.B1.*f + g;
-                    flxNO3  = D.*(r.rNO3.A1.*dedz+r.rNO3.B1.*dfdz + dgdz);
-                elseif z <= r.zno3 % layer 2
-                    [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC.calcfg_l12(z, bsd, swi, r, -bsd.NO3CR,       -bsd.NO3CR , 0, rNO3.ls2);
-                    NO3     = r.rNO3.A2.*e + r.rNO3.B2.*f + g;
-                    flxNO3  = D.*(r.rNO3.A2.*dedz+r.rNO3.B2.*dfdz + dgdz);
+                if(swi.TwoG_OM_model)
+                    if z <= r.zox   % layer 1
+                        [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC.calcfg_l12(z, bsd, swi, r, bsd.gamma.*bsd.NC1,bsd.gamma.*bsd.NC2 , 0, rNO3.ls1);
+                        NO3     = r.rNO3.A1.*e + r.rNO3.B1.*f + g;
+                        flxNO3  = D.*(r.rNO3.A1.*dedz+r.rNO3.B1.*dfdz + dgdz);
+                    elseif z <= r.zno3 % layer 2
+                        [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC.calcfg_l12(z, bsd, swi, r, -bsd.NO3CR,       -bsd.NO3CR , 0, rNO3.ls2);
+                        NO3     = r.rNO3.A2.*e + r.rNO3.B2.*f + g;
+                        flxNO3  = D.*(r.rNO3.A2.*dedz+r.rNO3.B2.*dfdz + dgdz);
+                    end
+                else
+                    if z <= r.zox   % layer 1
+                        [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC_RCM.calcfg_l12(z, bsd, swi, r, bsd.gamma.*bsd.NC1 , 0, rNO3.ls1);
+                        NO3     = r.rNO3.A1.*e + r.rNO3.B1.*f + g;
+                        flxNO3  = D.*(r.rNO3.A1.*dedz+r.rNO3.B1.*dfdz + dgdz);
+                    elseif z <= r.zno3 % layer 2
+                        [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC_RCM.calcfg_l12(z, bsd, swi, r, -bsd.NO3CR         , 0, rNO3.ls2);
+                        NO3     = r.rNO3.A2.*e + r.rNO3.B2.*f + g;
+                        flxNO3  = D.*(r.rNO3.A2.*dedz+r.rNO3.B2.*dfdz + dgdz);
+                    end
+                    
                 end
                 
             else

@@ -50,42 +50,75 @@ classdef benthic_zPO4_M
             %                 obj.Minf=1.0e-10;       % asymptotic concentration in anoxic conditions
             %             end
             
-            % Preparation: for each layer, sort out solution-matching across bioturbation boundary if necessary
-            
-            % layer 1: 0 < z < zox, OM degradation (-) Sorption to sediment Fe-oxides (ktemp)
-            %           ls =  prepfg_l12_PO4M(   bsd, swi, r, reac1P,        reac2P,        ktempP                 ,     QP,                             zU, zL,            D1P,                 D2P ,                alphaP
-            rPO4_M.ls1 = r.zTOC.prepfg_l12_PO4_M(bsd, swi, r, obj.reac1_ox, obj.reac2_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox),0, r.zox, obj.DPO41/(1+obj.KPO4_ox), obj.DPO42/(1+obj.KPO4_ox), 0, ...
-                0, 0, bsd.Dbio, 0, (1/bsd.SD)*obj.ksPO4);
-            % for M  ktempM, QM, D1M,   D2M,  alphaM
-            
-            % layer 2: zox < z < zinf,
-            % OM degradation (-) authigenic P formation (ktemp) (+) P desorption due to Fe-bound P release upon Fe oxide reduction
-            
-            %             ls =  prepfg_l12_PO4M( bsd, swi, r,     reac1P,        reac2P,        ktempP                ,     QP,                             zU,   zL,        D1P,       D2P,    alphaP
-            rPO4_M.ls2 = r.zTOC.prepfg_l12_PO4_M(bsd, swi, r, obj.reac1_anox, obj.reac2_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), r.zox, bsd.zinf, obj.DPO41/(1+obj.KPO4_anox), obj.DPO42/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), ...
-                obj.kmPO4, obj.kmPO4.*obj.Minf, bsd.Dbio, 0, 0);
-            % for M           ktempM,       QM,              D1M,  D2M, alphaM)
-            
-            % Work up from the bottom, matching solutions at boundaries
-            % Basis functions at bottom of layer 2 zinf
-            [ e2_zinf_P, dedz2_zinf_P, f2_zinf_P, dfdz2_zinf_P, g2_zinf_P, dgdz2_zinf_P, p2_zinf_P, dpdz2_zinf_P, q2_zinf_P, dqdz2_zinf_P, ...
-                e2_zinf_M, dedz2_zinf_M, f2_zinf_M, dfdz2_zinf_M, g2_zinf_M, dgdz2_zinf_M, p2_zinf_M, dpdz2_zinf_M, q2_zinf_M, dqdz2_zinf_M] ...
-                = r.zTOC.calcfg_l12_PO4_M(bsd.zinf, bsd, swi, r, obj.reac1_anox, obj.reac2_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), rPO4_M.ls2, obj.kmPO4, obj.kmPO4.*obj.Minf, 0);
-            % calcfg_l12_PO4_M(obj,            z,   bsd, swi, res,     reac1P,         reac2P,          ktempP,                        QtempP,                     alphaP,                                  ls,      ktempM,           QtempM,    alphaM)
-            
-            % Match at zox, layer 1 - layer 2 (continuity and flux)
-            % basis functions at bottom of layer 1
-            [ e1_zox_P, dedz1_zox_P, f1_zox_P, dfdz1_zox_P, g1_zox_P, dgdz1_zox_P, p1_zox_P, dpdz1_zox_P, q1_zox_P, dqdz1_zox_P, ...
-                e1_zox_M, dedz1_zox_M, f1_zox_M, dfdz1_zox_M, g1_zox_M, dgdz1_zox_M, p1_zox_M, dpdz1_zox_M, q1_zox_M, dqdz1_zox_M]...
-                = r.zTOC.calcfg_l12_PO4_M(r.zox, bsd, swi, r,  obj.reac1_ox, obj.reac2_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox), 0, rPO4_M.ls1, 0, 0, (1/bsd.SD)*obj.ksPO4);
-            % calcfg_l12_PO4_M(obj, z, bsd, swi, res,   reac1P,       reac2P,               ktempP,                     QtempP,                alphaP,       ls,  ktempM, QtempM, alphaM)
-            
-            % ... and top of layer 2
-            [ e2_zox_P, dedz2_zox_P, f2_zox_P, dfdz2_zox_P, g2_zox_P, dgdz2_zox_P, p2_zox_P, dpdz2_zox_P, q2_zox_P, dqdz2_zox_P, ...
-                e2_zox_M, dedz2_zox_M, f2_zox_M, dfdz2_zox_M, g2_zox_M, dgdz2_zox_M, p2_zox_M, dpdz2_zox_M, q2_zox_M, dqdz2_zox_M] ...
-                = r.zTOC.calcfg_l12_PO4_M(r.zox, bsd, swi, r, obj.reac1_anox, obj.reac2_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), rPO4_M.ls2, obj.kmPO4, obj.kmPO4.*obj.Minf, 0);
-            % calcfg_l12_PO4_M(obj, z, bsd, swi, res,     reac1P,         reac2P,                ktempP,                        QtempP,                          alphaP,                           ls,         ktempM,           QtempM,    alphaM)
-            
+            if(swi.TwoG_OM_model)
+                % Preparation: for each layer, sort out solution-matching across bioturbation boundary if necessary
+                % layer 1: 0 < z < zox, OM degradation (-) Sorption to sediment Fe-oxides (ktemp)
+                rPO4_M.ls1 = r.zTOC.prepfg_l12_PO4_M(bsd, swi, r, obj.reac1_ox, obj.reac2_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox),0, r.zox, obj.DPO41/(1+obj.KPO4_ox), obj.DPO42/(1+obj.KPO4_ox), 0, ...
+                    0, 0, bsd.Dbio, 0, (1/bsd.SD)*obj.ksPO4);
+                % for M  ktempM, QM, D1M,   D2M,  alphaM
+                
+                % layer 2: zox < z < zinf,
+                % OM degradation (-) authigenic P formation (ktemp) (+) P desorption due to Fe-bound P release upon Fe oxide reduction
+                
+                %             ls =  prepfg_l12_PO4M( bsd, swi, r,     reac1P,        reac2P,        ktempP                ,     QP,                             zU,   zL,        D1P,       D2P,    alphaP
+                rPO4_M.ls2 = r.zTOC.prepfg_l12_PO4_M(bsd, swi, r, obj.reac1_anox, obj.reac2_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), r.zox, bsd.zinf, obj.DPO41/(1+obj.KPO4_anox), obj.DPO42/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), ...
+                    obj.kmPO4, obj.kmPO4.*obj.Minf, bsd.Dbio, 0, 0);
+                % for M           ktempM,       QM,              D1M,  D2M, alphaM)
+                
+                % Work up from the bottom, matching solutions at boundaries
+                % Basis functions at bottom of layer 2 zinf
+                [ e2_zinf_P, dedz2_zinf_P, f2_zinf_P, dfdz2_zinf_P, g2_zinf_P, dgdz2_zinf_P, p2_zinf_P, dpdz2_zinf_P, q2_zinf_P, dqdz2_zinf_P, ...
+                    e2_zinf_M, dedz2_zinf_M, f2_zinf_M, dfdz2_zinf_M, g2_zinf_M, dgdz2_zinf_M, p2_zinf_M, dpdz2_zinf_M, q2_zinf_M, dqdz2_zinf_M] ...
+                    = r.zTOC.calcfg_l12_PO4_M(bsd.zinf, bsd, swi, r, obj.reac1_anox, obj.reac2_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), rPO4_M.ls2, obj.kmPO4, obj.kmPO4.*obj.Minf, 0);
+                % calcfg_l12_PO4_M(obj,            z,   bsd, swi, res,     reac1P,         reac2P,          ktempP,                        QtempP,                     alphaP,                                  ls,      ktempM,           QtempM,    alphaM)
+                
+                % Match at zox, layer 1 - layer 2 (continuity and flux)
+                % basis functions at bottom of layer 1
+                [ e1_zox_P, dedz1_zox_P, f1_zox_P, dfdz1_zox_P, g1_zox_P, dgdz1_zox_P, p1_zox_P, dpdz1_zox_P, q1_zox_P, dqdz1_zox_P, ...
+                    e1_zox_M, dedz1_zox_M, f1_zox_M, dfdz1_zox_M, g1_zox_M, dgdz1_zox_M, p1_zox_M, dpdz1_zox_M, q1_zox_M, dqdz1_zox_M]...
+                    = r.zTOC.calcfg_l12_PO4_M(r.zox, bsd, swi, r,  obj.reac1_ox, obj.reac2_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox), 0, rPO4_M.ls1, 0, 0, (1/bsd.SD)*obj.ksPO4);
+                % calcfg_l12_PO4_M(obj, z, bsd, swi, res,   reac1P,       reac2P,               ktempP,                     QtempP,                alphaP,       ls,  ktempM, QtempM, alphaM)
+                
+                % ... and top of layer 2
+                [ e2_zox_P, dedz2_zox_P, f2_zox_P, dfdz2_zox_P, g2_zox_P, dgdz2_zox_P, p2_zox_P, dpdz2_zox_P, q2_zox_P, dqdz2_zox_P, ...
+                    e2_zox_M, dedz2_zox_M, f2_zox_M, dfdz2_zox_M, g2_zox_M, dgdz2_zox_M, p2_zox_M, dpdz2_zox_M, q2_zox_M, dqdz2_zox_M] ...
+                    = r.zTOC.calcfg_l12_PO4_M(r.zox, bsd, swi, r, obj.reac1_anox, obj.reac2_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), rPO4_M.ls2, obj.kmPO4, obj.kmPO4.*obj.Minf, 0);
+                % calcfg_l12_PO4_M(obj, z, bsd, swi, res,     reac1P,         reac2P,                ktempP,                        QtempP,                          alphaP,                           ls,         ktempM,           QtempM,    alphaM)
+            else
+                % Preparation: for each layer, sort out solution-matching across bioturbation boundary if necessary
+                % layer 1: 0 < z < zox, OM degradation (-) Sorption to sediment Fe-oxides (ktemp)
+                rPO4_M.ls1 = r.zTOC_RCM.prepfg_l12_PO4_M(bsd, swi, r, obj.reac1_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox),0, r.zox, obj.DPO41/(1+obj.KPO4_ox), obj.DPO42/(1+obj.KPO4_ox), 0, ...
+                    0, 0, bsd.Dbio, 0, (1/bsd.SD)*obj.ksPO4);
+                % for M  ktempM, QM, D1M,   D2M,  alphaM
+                
+                % layer 2: zox < z < zinf,
+                % OM degradation (-) authigenic P formation (ktemp) (+) P desorption due to Fe-bound P release upon Fe oxide reduction
+                
+                %             ls =  prepfg_l12_PO4M( bsd, swi, r,     reac1P,      ktempP                ,     QP,                                   zU,   zL,        D1P,       D2P,    alphaP
+                rPO4_M.ls2 = r.zTOC_RCM.prepfg_l12_PO4_M(bsd, swi, r, obj.reac1_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), r.zox, bsd.zinf, obj.DPO41/(1+obj.KPO4_anox), obj.DPO42/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), ...
+                    obj.kmPO4, obj.kmPO4.*obj.Minf, bsd.Dbio, 0, 0);
+                % for M           ktempM,       QM,              D1M,  D2M, alphaM)
+                
+                % Work up from the bottom, matching solutions at boundaries
+                % Basis functions at bottom of layer 2 zinf
+                [ e2_zinf_P, dedz2_zinf_P, f2_zinf_P, dfdz2_zinf_P, g2_zinf_P, dgdz2_zinf_P, p2_zinf_P, dpdz2_zinf_P, q2_zinf_P, dqdz2_zinf_P, ...
+                    e2_zinf_M, dedz2_zinf_M, f2_zinf_M, dfdz2_zinf_M, g2_zinf_M, dgdz2_zinf_M, p2_zinf_M, dpdz2_zinf_M, q2_zinf_M, dqdz2_zinf_M] ...
+                    = r.zTOC_RCM.calcfg_l12_PO4_M(bsd.zinf, bsd, swi, r, obj.reac1_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), rPO4_M.ls2, obj.kmPO4, obj.kmPO4.*obj.Minf, 0);
+                % calcfg_l12_PO4_M(obj,            z,   bsd, swi, res,     reac1P,   ktempP,                        QtempP,                     alphaP,                                  ls,      ktempM,           QtempM,    alphaM)
+                
+                % Match at zox, layer 1 - layer 2 (continuity and flux)
+                % basis functions at bottom of layer 1
+                [ e1_zox_P, dedz1_zox_P, f1_zox_P, dfdz1_zox_P, g1_zox_P, dgdz1_zox_P, p1_zox_P, dpdz1_zox_P, q1_zox_P, dqdz1_zox_P, ...
+                    e1_zox_M, dedz1_zox_M, f1_zox_M, dfdz1_zox_M, g1_zox_M, dgdz1_zox_M, p1_zox_M, dpdz1_zox_M, q1_zox_M, dqdz1_zox_M]...
+                    = r.zTOC_RCM.calcfg_l12_PO4_M(r.zox, bsd, swi, r,  obj.reac1_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox), 0, rPO4_M.ls1, 0, 0, (1/bsd.SD)*obj.ksPO4);
+                % calcfg_l12_PO4_M(obj, z, bsd, swi, res,          reac1P,       ktempP,                     QtempP,                alphaP,       ls,  ktempM, QtempM, alphaM)
+                
+                % ... and top of layer 2
+                [ e2_zox_P, dedz2_zox_P, f2_zox_P, dfdz2_zox_P, g2_zox_P, dgdz2_zox_P, p2_zox_P, dpdz2_zox_P, q2_zox_P, dqdz2_zox_P, ...
+                    e2_zox_M, dedz2_zox_M, f2_zox_M, dfdz2_zox_M, g2_zox_M, dgdz2_zox_M, p2_zox_M, dpdz2_zox_M, q2_zox_M, dqdz2_zox_M] ...
+                    = r.zTOC_RCM.calcfg_l12_PO4_M(r.zox, bsd, swi, r, obj.reac1_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), rPO4_M.ls2, obj.kmPO4, obj.kmPO4.*obj.Minf, 0);
+                
+            end
             % match solutions at zox - continuous concentration and flux
             % organize the data in matrices and let matlab do the calculation
             %  |x1        |   | A_l |      | y1        | | A_r|    |z1|    always PO4 continuity
@@ -144,12 +177,18 @@ classdef benthic_zPO4_M
             [zox.C, zox.D] = benthic_utils.matchsoln_PO4_M(X, Y, Z,case_flag);
             
             
-            % Solution at swi, top of layer 1
-            [ e1_0_P, dedz1_0_P, f1_0_P, dfdz1_0_P, g1_0_P, dgdz1_0_P, p1_0_P, dpdz1_0_P, q1_0_P, dqdz1_0_P, ...
-                e1_0_M, dedz1_0_M, f1_0_M, dfdz1_0_M, g1_0_M, dgdz1_0_M, p1_0_M, dpdz1_0_M, q1_0_M, dqdz1_0_M]...
-                = r.zTOC.calcfg_l12_PO4_M(0, bsd, swi, r, obj.reac1_ox, obj.reac2_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox), 0,  rPO4_M.ls1, 0, 0, (1/bsd.SD)*obj.ksPO4);
-            % calcfg_l12_PO4_M(obj, z, bsd, swi, res, reac1P,              reac2P,          ktempP,                       QtempP,             alphaP,   ls,       tempM, QtempM, alphaM)
-            
+            if(swi.TwoG_OM_model)
+                % Solution at swi, top of layer 1
+                [ e1_0_P, dedz1_0_P, f1_0_P, dfdz1_0_P, g1_0_P, dgdz1_0_P, p1_0_P, dpdz1_0_P, q1_0_P, dqdz1_0_P, ...
+                    e1_0_M, dedz1_0_M, f1_0_M, dfdz1_0_M, g1_0_M, dgdz1_0_M, p1_0_M, dpdz1_0_M, q1_0_M, dqdz1_0_M]...
+                    = r.zTOC.calcfg_l12_PO4_M(0, bsd, swi, r, obj.reac1_ox, obj.reac2_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox), 0,  rPO4_M.ls1, 0, 0, (1/bsd.SD)*obj.ksPO4);
+                % calcfg_l12_PO4_M(obj, z, bsd, swi, res, reac1P,              reac2P,          ktempP,                       QtempP,             alphaP,   ls,       tempM, QtempM, alphaM)
+            else
+                % Solution at swi, top of layer 1
+                [ e1_0_P, dedz1_0_P, f1_0_P, dfdz1_0_P, g1_0_P, dgdz1_0_P, p1_0_P, dpdz1_0_P, q1_0_P, dqdz1_0_P, ...
+                    e1_0_M, dedz1_0_M, f1_0_M, dfdz1_0_M, g1_0_M, dgdz1_0_M, p1_0_M, dpdz1_0_M, q1_0_M, dqdz1_0_M]...
+                    = r.zTOC_RCM.calcfg_l12_PO4_M(0, bsd, swi, r, obj.reac1_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox), 0,  rPO4_M.ls1, 0, 0, (1/bsd.SD)*obj.ksPO4);
+            end
             % transform to use coeffs from l2
             % Now find 'transformed' basis functions such that in layer 1, O2 = A_2*et + B_2*ft + gt  (ie layer 1 soln written in terms of layer 2 coeffs A_2, B_2)
             
@@ -194,7 +233,7 @@ classdef benthic_zPO4_M
             [ rPO4_M.A2, rPO4_M.B2, rPO4_M.C2]  = benthic_utils.solve2eqn_PO4_M(X,Y);
             rPO4_M.D2 = 0;
             
-                        
+            
             % calculate concentration at zinf
             r.conczinfPO4 = rPO4_M.A2.*e2_zinf_P+rPO4_M.B2.*f2_zinf_P + g2_zinf_P;
             
@@ -230,8 +269,11 @@ classdef benthic_zPO4_M
             tmpreac1    = bsd.PO4C.*bsd.gammaCH4;
             tmpreac2    = bsd.PO4C.*bsd.gammaCH4;
             
-            FPO4 = r.zTOC.calcReac(zPO4, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);
-            % TODO confirm (1-bsd.por)*  has been added (to k1 & k2 ?)
+            if(swi.TwoG_OM_model)
+                FPO4 = r.zTOC.calcReac(zPO4, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);
+            else
+                FPO4 = r.zTOC_RCM.calcReac(zPO4, bsd.zinf, tmpreac1, bsd, swi, r);
+            end            % TODO confirm (1-bsd.por)*  has been added (to k1 & k2 ?)
         end
         
         
@@ -257,29 +299,58 @@ classdef benthic_zPO4_M
             
             
             
-            if (z <= r.zox)   % layer 1
-                [ e_P, dedz_P, f_P, dfdz_P, g_P, dgdz_P, p_P, dpdz_P, q_P, dqdz_P, ...
-                    e_M, dedz_M, f_M, dfdz_M, g_M, dgdz_M, p_M, dpdz_M, q_M, dqdz_M]...
-                    = r.zTOC.calcfg_l12_PO4_M(z, bsd, swi, r,  obj.reac1_ox, obj.reac2_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox), 0, rPO4_M.ls1, 0, 0, (1/bsd.SD)*obj.ksPO4);
-                % calcfg_l12_PO4_M(obj, z, bsd, swi, res,   reac1P,       reac2P,          ktempP,                     QtempP,                alphaP, ls,   ktempM, QtempM, alphaM)
+            if(swi.TwoG_OM_model)
+                if (z <= r.zox)   % layer 1
+                    [ e_P, dedz_P, f_P, dfdz_P, g_P, dgdz_P, p_P, dpdz_P, q_P, dqdz_P, ...
+                        e_M, dedz_M, f_M, dfdz_M, g_M, dgdz_M, p_M, dpdz_M, q_M, dqdz_M]...
+                        = r.zTOC.calcfg_l12_PO4_M(z, bsd, swi, r,  obj.reac1_ox, obj.reac2_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox), 0, rPO4_M.ls1, 0, 0, (1/bsd.SD)*obj.ksPO4);
+                    % calcfg_l12_PO4_M(obj, z, bsd, swi, res,   reac1P,       reac2P,          ktempP,                     QtempP,                alphaP, ls,   ktempM, QtempM, alphaM)
+                    
+                    
+                    PO4     = r.rPO4_M.A1.*e_P + r.rPO4_M.B1.*f_P + r.rPO4_M.C1.*p_P + r.rPO4_M.D1.*q_P + g_P;
+                    flxPO4  = D_P/(1+obj.KPO4_ox).*(r.rPO4_M.A1.*dedz_P+r.rPO4_M.B1.*dfdz_P + r.rPO4_M.C1.*dpdz_P+r.rPO4_M.D1.*dqdz_P + dgdz_P);
+                    M     = r.rPO4_M.A1.*e_M + r.rPO4_M.B1.*f_M + r.rPO4_M.C1.*p_M + r.rPO4_M.D1.*q_M + g_M;
+                    flxM  = D_M.*(r.rPO4_M.A1.*dedz_M+r.rPO4_M.B1.*dfdz_M + r.rPO4_M.C1.*dpdz_M+r.rPO4_M.D1.*dqdz_M + dgdz_M);
+                    
+                else        % layer 2
+                    [ e_P, dedz_P, f_P, dfdz_P, g_P, dgdz_P, p_P, dpdz_P, q_P, dqdz_P, ...
+                        e_M, dedz_M, f_M, dfdz_M, g_M, dgdz_M, p_M, dpdz_M, q_M, dqdz_M]...
+                        = r.zTOC.calcfg_l12_PO4_M(z, bsd, swi, r, obj.reac1_anox, obj.reac2_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), rPO4_M.ls2, obj.kmPO4, obj.kmPO4.*obj.Minf, 0);
+                    % calcfg_l12_PO4_M(obj, z, bsd, swi, res,     reac1P,         reac2P,          ktempP,                        QtempP,                     alphaP,                    ls,      ktempM,           QtempM,    alphaM)
+                    
+                    
+                    PO4     = r.rPO4_M.A2.*e_P + r.rPO4_M.B2.*f_P + r.rPO4_M.C2.*p_P + r.rPO4_M.D2.*q_P + g_P;
+                    flxPO4  = D_P/(1+obj.KPO4_anox).*(r.rPO4_M.A2.*dedz_P+r.rPO4_M.B2.*dfdz_P + r.rPO4_M.C2.*dpdz_P+r.rPO4_M.D2.*dqdz_P + dgdz_P);
+                    M     = r.rPO4_M.A2.*e_M + r.rPO4_M.B2.*f_M + r.rPO4_M.C2.*p_M + r.rPO4_M.D2.*q_M + g_M;
+                    flxM  = D_M.*(r.rPO4_M.A2.*dedz_M+r.rPO4_M.B2.*dfdz_M + r.rPO4_M.C2.*dpdz_M+r.rPO4_M.D2.*dqdz_M + dgdz_M);
+                end
                 
+            else
+                if (z <= r.zox)   % layer 1
+                    [ e_P, dedz_P, f_P, dfdz_P, g_P, dgdz_P, p_P, dpdz_P, q_P, dqdz_P, ...
+                        e_M, dedz_M, f_M, dfdz_M, g_M, dgdz_M, p_M, dpdz_M, q_M, dqdz_M]...
+                        = r.zTOC_RCM.calcfg_l12_PO4_M(z, bsd, swi, r,  obj.reac1_ox, obj.ksPO4/(1+obj.KPO4_ox), obj.PO4s*obj.ksPO4/(1+obj.KPO4_ox), 0, rPO4_M.ls1, 0, 0, (1/bsd.SD)*obj.ksPO4);
+                    % calcfg_l12_PO4_M(obj, z, bsd, swi, res,       reac1P,      ktempP,                     QtempP,                alphaP, ls,   ktempM, QtempM, alphaM)
+                    
+                    
+                    PO4     = r.rPO4_M.A1.*e_P + r.rPO4_M.B1.*f_P + r.rPO4_M.C1.*p_P + r.rPO4_M.D1.*q_P + g_P;
+                    flxPO4  = D_P/(1+obj.KPO4_ox).*(r.rPO4_M.A1.*dedz_P+r.rPO4_M.B1.*dfdz_P + r.rPO4_M.C1.*dpdz_P+r.rPO4_M.D1.*dqdz_P + dgdz_P);
+                    M     = r.rPO4_M.A1.*e_M + r.rPO4_M.B1.*f_M + r.rPO4_M.C1.*p_M + r.rPO4_M.D1.*q_M + g_M;
+                    flxM  = D_M.*(r.rPO4_M.A1.*dedz_M+r.rPO4_M.B1.*dfdz_M + r.rPO4_M.C1.*dpdz_M+r.rPO4_M.D1.*dqdz_M + dgdz_M);
+                    
+                else        % layer 2
+                    [ e_P, dedz_P, f_P, dfdz_P, g_P, dgdz_P, p_P, dpdz_P, q_P, dqdz_P, ...
+                        e_M, dedz_M, f_M, dfdz_M, g_M, dgdz_M, p_M, dpdz_M, q_M, dqdz_M]...
+                        = r.zTOC_RCM.calcfg_l12_PO4_M(z, bsd, swi, r, obj.reac1_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), rPO4_M.ls2, obj.kmPO4, obj.kmPO4.*obj.Minf, 0);
+                    % calcfg_l12_PO4_M(obj, z, bsd, swi, res,     reac1P,         reac2P,          ktempP,                        QtempP,                     alphaP,                    ls,      ktempM,           QtempM,    alphaM)
+                    
+                    
+                    PO4     = r.rPO4_M.A2.*e_P + r.rPO4_M.B2.*f_P + r.rPO4_M.C2.*p_P + r.rPO4_M.D2.*q_P + g_P;
+                    flxPO4  = D_P/(1+obj.KPO4_anox).*(r.rPO4_M.A2.*dedz_P+r.rPO4_M.B2.*dfdz_P + r.rPO4_M.C2.*dpdz_P+r.rPO4_M.D2.*dqdz_P + dgdz_P);
+                    M     = r.rPO4_M.A2.*e_M + r.rPO4_M.B2.*f_M + r.rPO4_M.C2.*p_M + r.rPO4_M.D2.*q_M + g_M;
+                    flxM  = D_M.*(r.rPO4_M.A2.*dedz_M+r.rPO4_M.B2.*dfdz_M + r.rPO4_M.C2.*dpdz_M+r.rPO4_M.D2.*dqdz_M + dgdz_M);
+                end
                 
-                PO4     = r.rPO4_M.A1.*e_P + r.rPO4_M.B1.*f_P + r.rPO4_M.C1.*p_P + r.rPO4_M.D1.*q_P + g_P;
-                flxPO4  = D_P/(1+obj.KPO4_ox).*(r.rPO4_M.A1.*dedz_P+r.rPO4_M.B1.*dfdz_P + r.rPO4_M.C1.*dpdz_P+r.rPO4_M.D1.*dqdz_P + dgdz_P);
-                M     = r.rPO4_M.A1.*e_M + r.rPO4_M.B1.*f_M + r.rPO4_M.C1.*p_M + r.rPO4_M.D1.*q_M + g_M;
-                flxM  = D_M.*(r.rPO4_M.A1.*dedz_M+r.rPO4_M.B1.*dfdz_M + r.rPO4_M.C1.*dpdz_M+r.rPO4_M.D1.*dqdz_M + dgdz_M);
-                
-            else        % layer 2
-                [ e_P, dedz_P, f_P, dfdz_P, g_P, dgdz_P, p_P, dpdz_P, q_P, dqdz_P, ...
-                    e_M, dedz_M, f_M, dfdz_M, g_M, dgdz_M, p_M, dpdz_M, q_M, dqdz_M]...
-                    = r.zTOC.calcfg_l12_PO4_M(z, bsd, swi, r, obj.reac1_anox, obj.reac2_anox, obj.kaPO4/(1+obj.KPO4_anox), obj.PO4a*obj.kaPO4/(1+obj.KPO4_anox), bsd.SD*obj.kmPO4/(1+obj.KPO4_anox), rPO4_M.ls2, obj.kmPO4, obj.kmPO4.*obj.Minf, 0);
-                % calcfg_l12_PO4_M(obj, z, bsd, swi, res,     reac1P,         reac2P,          ktempP,                        QtempP,                     alphaP,                    ls,      ktempM,           QtempM,    alphaM)
-                
-                
-                PO4     = r.rPO4_M.A2.*e_P + r.rPO4_M.B2.*f_P + r.rPO4_M.C2.*p_P + r.rPO4_M.D2.*q_P + g_P;
-                flxPO4  = D_P/(1+obj.KPO4_anox).*(r.rPO4_M.A2.*dedz_P+r.rPO4_M.B2.*dfdz_P + r.rPO4_M.C2.*dpdz_P+r.rPO4_M.D2.*dqdz_P + dgdz_P);
-                M     = r.rPO4_M.A2.*e_M + r.rPO4_M.B2.*f_M + r.rPO4_M.C2.*p_M + r.rPO4_M.D2.*q_M + g_M;
-                flxM  = D_M.*(r.rPO4_M.A2.*dedz_M+r.rPO4_M.B2.*dfdz_M + r.rPO4_M.C2.*dpdz_M+r.rPO4_M.D2.*dqdz_M + dgdz_M);
             end
             
         end

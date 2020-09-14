@@ -61,7 +61,7 @@ classdef benthic_zSO4
             
             flxswiSO4 = flxswiSO4 - bsd.por.*bsd.w.*(swi.SO40-conczinf);
             if(abs(flxswiSO4) <= bsd.tol_const)
-                flxswiSO4 = 0.0
+                flxswiSO4 = 0.0;
             end
             
             r.flxzso4 = flxzso4;
@@ -73,62 +73,120 @@ classdef benthic_zSO4
             % Calculate trial solution for given zso4, matching boundary conditions from layer-by-layer solutions
             
             
-            % Preparation: for each layer, sort out solution-matching across bioturbation boundary if necessary
-            % layer 1: 0 < z < zox, passive diffn
-            %      ls =      prepfg_l12( bsd, swi, r, reac1,     reac2,     ktemp, zU, zL, D1,        D2)
-            rSO4.ls1 = r.zTOC.prepfg_l12(bsd, swi, r, 0,         0,         0,     0, r.zox, obj.DSO41, obj.DSO42);
-            % layer 2: zox < z < zno3, passive diffn
-            rSO4.ls2 = r.zTOC.prepfg_l12(bsd, swi, r, 0,         0,         0,  r.zox, r.zno3, obj.DSO41, obj.DSO42);
-            % layer 3: zno3 < z < zso4, SO4 consumption by OM oxidation
-            rSO4.ls3 = r.zTOC.prepfg_l12(bsd, swi, r, obj.reac1, obj.reac2, 0, r.zno3, zso4, obj.DSO41, obj.DSO42);
-            
-            % Work up from the bottom, matching solutions at boundaries
-            % Basis functions at bottom of layer 3 zso4
-            [ e3_zso4, dedz3_zso4, f3_zso4, dfdz3_zso4, g3_zso4, dgdz3_zso4] ...
-                = r.zTOC.calcfg_l12(zso4, bsd, swi, r, obj.reac1, obj.reac2, 0, rSO4.ls3);
-            
-            % Match at zno3, layer 2 - layer 3 (continuity and flux)
-            % basis functions at bottom of layer 2
-            [ e2_zno3, dedz2_zno3, f2_zno3, dfdz2_zno3, g2_zno3, dgdz2_zno3] ...
-                = r.zTOC.calcfg_l12(r.zno3, bsd, swi, r,     0,            0, 0, rSO4.ls2);
-            % ... and top of layer 3
-            [ e3_zno3, dedz3_zno3, f3_zno3, dfdz3_zno3, g3_zno3, dgdz3_zno3] ...
-                = r.zTOC.calcfg_l12(r.zno3, bsd, swi, r, obj.reac1, obj.reac2, 0, rSO4.ls3);
-            % match solutions at zno3 - continuous concentration and flux
-            [zno3.a, zno3.b, zno3.c, zno3.d, zno3.e, zno3.f] = benthic_utils.matchsoln(e2_zno3, f2_zno3, g2_zno3, dedz2_zno3, dfdz2_zno3, dgdz2_zno3, ...
-                e3_zno3, f3_zno3, g3_zno3, dedz3_zno3, dfdz3_zno3, dgdz3_zno3, ...
-                0, 0);
-            
-            % Match at zox, layer 1 - layer 2 (continuity, flux discontinuity from H2S source)
-            % flux of H2S to oxic interface (Source of SO4)
-            % NB: include methane region as AOM will produce sulphide as well..
-            %            FH2S = 0.0; %r.zTOC.calcReac(r.zno3, zso4, bsd.SO4C, bsd.SO4C, bsd, swi, r) + 0.0; % no secondary redox!
-            FH2S = r.zTOC.calcReac(r.zno3, zso4, bsd.SO4C, bsd.SO4C, bsd, swi, r) ... % MULTIPLY BY 1/POR ????
-                + bsd.gammaCH4.*r.zTOC.calcReac(zso4, bsd.zinf, bsd.MC, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
-            % basis functions at bottom of layer 1
-            [ e1_zox, dedz1_zox, f1_zox, dfdz1_zox, g1_zox, dgdz1_zox] ...
-                = r.zTOC.calcfg_l12(r.zox, bsd, swi, r, 0 , 0 , 0, rSO4.ls1);
-            % basis functions at top of layer 2
-            [ e2_zox, dedz2_zox, f2_zox, dfdz2_zox, g2_zox, dgdz2_zox] ...
-                = r.zTOC.calcfg_l12(r.zox, bsd, swi, r, 0, 0, 0, rSO4.ls2);
-            % transform to use coeffs from l3
-            [e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox] = benthic_utils.xformsoln(e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
-                zno3.a , zno3.b , zno3.c , zno3.d , zno3.e ,zno3.f);
-            
-            % match solutions at zox - continuous concentration, flux discontinuity from H2S ox
-            D = (r.zox <= bsd.zbio).*obj.DSO41 + (r.zox > bsd.zbio).*obj.DSO42;
-            
-            [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
-                e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
-                0, -r.zxf.*bsd.gammaH2S*(1-bsd.gammaFeS)*FH2S./D);
-            %Dom 09.02.2016: is there a ...*gammaH2S*FH2S... missing?
-            % Solution at swi, top of layer 1
-            [ e1_0, dedz1_0, f1_0, dfdz1_0, g1_0, dgdz1_0] ...
-                = r.zTOC.calcfg_l12(0, bsd, swi, r, 0 , 0 , 0, rSO4.ls1);
-            % transform to use coeffs from l3
-            [ e1_0, f1_0, g1_0, dedz1_0,  dfdz1_0, dgdz1_0]= benthic_utils.xformsoln(e1_0, f1_0, g1_0, dedz1_0, dfdz1_0, dgdz1_0, ...
-                zox.a , zox.b , zox.c , zox.d , zox.e ,zox.f);
-            
+            if(swi.TwoG_OM_model)
+                % Preparation: for each layer, sort out solution-matching across bioturbation boundary if necessary
+                % layer 1: 0 < z < zox, passive diffn
+                %      ls =      prepfg_l12( bsd, swi, r, reac1,     reac2,     ktemp, zU, zL, D1,        D2)
+                rSO4.ls1 = r.zTOC.prepfg_l12(bsd, swi, r, 0,         0,         0,     0, r.zox, obj.DSO41, obj.DSO42);
+                % layer 2: zox < z < zno3, passive diffn
+                rSO4.ls2 = r.zTOC.prepfg_l12(bsd, swi, r, 0,         0,         0,  r.zox, r.zno3, obj.DSO41, obj.DSO42);
+                % layer 3: zno3 < z < zso4, SO4 consumption by OM oxidation
+                rSO4.ls3 = r.zTOC.prepfg_l12(bsd, swi, r, obj.reac1, obj.reac2, 0, r.zno3, zso4, obj.DSO41, obj.DSO42);
+                
+                % Work up from the bottom, matching solutions at boundaries
+                % Basis functions at bottom of layer 3 zso4
+                [ e3_zso4, dedz3_zso4, f3_zso4, dfdz3_zso4, g3_zso4, dgdz3_zso4] ...
+                    = r.zTOC.calcfg_l12(zso4, bsd, swi, r, obj.reac1, obj.reac2, 0, rSO4.ls3);
+                
+                % Match at zno3, layer 2 - layer 3 (continuity and flux)
+                % basis functions at bottom of layer 2
+                [ e2_zno3, dedz2_zno3, f2_zno3, dfdz2_zno3, g2_zno3, dgdz2_zno3] ...
+                    = r.zTOC.calcfg_l12(r.zno3, bsd, swi, r,     0,            0, 0, rSO4.ls2);
+                % ... and top of layer 3
+                [ e3_zno3, dedz3_zno3, f3_zno3, dfdz3_zno3, g3_zno3, dgdz3_zno3] ...
+                    = r.zTOC.calcfg_l12(r.zno3, bsd, swi, r, obj.reac1, obj.reac2, 0, rSO4.ls3);
+                % match solutions at zno3 - continuous concentration and flux
+                [zno3.a, zno3.b, zno3.c, zno3.d, zno3.e, zno3.f] = benthic_utils.matchsoln(e2_zno3, f2_zno3, g2_zno3, dedz2_zno3, dfdz2_zno3, dgdz2_zno3, ...
+                    e3_zno3, f3_zno3, g3_zno3, dedz3_zno3, dfdz3_zno3, dgdz3_zno3, ...
+                    0, 0);
+                
+                % Match at zox, layer 1 - layer 2 (continuity, flux discontinuity from H2S source)
+                % flux of H2S to oxic interface (Source of SO4)
+                % NB: include methane region as AOM will produce sulphide as well..
+                %            FH2S = 0.0; %r.zTOC.calcReac(r.zno3, zso4, bsd.SO4C, bsd.SO4C, bsd, swi, r) + 0.0; % no secondary redox!
+                FH2S = r.zTOC.calcReac(r.zno3, zso4, bsd.SO4C, bsd.SO4C, bsd, swi, r) ... % MULTIPLY BY 1/POR ????
+                    + bsd.gammaCH4.*r.zTOC.calcReac(zso4, bsd.zinf, bsd.MC, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
+                % basis functions at bottom of layer 1
+                [ e1_zox, dedz1_zox, f1_zox, dfdz1_zox, g1_zox, dgdz1_zox] ...
+                    = r.zTOC.calcfg_l12(r.zox, bsd, swi, r, 0 , 0 , 0, rSO4.ls1);
+                % basis functions at top of layer 2
+                [ e2_zox, dedz2_zox, f2_zox, dfdz2_zox, g2_zox, dgdz2_zox] ...
+                    = r.zTOC.calcfg_l12(r.zox, bsd, swi, r, 0, 0, 0, rSO4.ls2);
+                % transform to use coeffs from l3
+                [e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox] = benthic_utils.xformsoln(e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
+                    zno3.a , zno3.b , zno3.c , zno3.d , zno3.e ,zno3.f);
+                
+                % match solutions at zox - continuous concentration, flux discontinuity from H2S ox
+                D = (r.zox <= bsd.zbio).*obj.DSO41 + (r.zox > bsd.zbio).*obj.DSO42;
+                
+                [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
+                    e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
+                    0, -r.zxf.*bsd.gammaH2S*(1-bsd.gammaFeS)*FH2S./D);
+                %Dom 09.02.2016: is there a ...*gammaH2S*FH2S... missing?
+                % Solution at swi, top of layer 1
+                [ e1_0, dedz1_0, f1_0, dfdz1_0, g1_0, dgdz1_0] ...
+                    = r.zTOC.calcfg_l12(0, bsd, swi, r, 0 , 0 , 0, rSO4.ls1);
+                % transform to use coeffs from l3
+                [ e1_0, f1_0, g1_0, dedz1_0,  dfdz1_0, dgdz1_0]= benthic_utils.xformsoln(e1_0, f1_0, g1_0, dedz1_0, dfdz1_0, dgdz1_0, ...
+                    zox.a , zox.b , zox.c , zox.d , zox.e ,zox.f);
+            else
+                % Preparation: for each layer, sort out solution-matching across bioturbation boundary if necessary
+                % layer 1: 0 < z < zox, passive diffn
+                
+                rSO4.ls1 = r.zTOC_RCM.prepfg_l12(bsd, swi, r, 0,       0,     0, r.zox, obj.DSO41, obj.DSO42);
+                % layer 2: zox < z < zno3, passive diffn
+                rSO4.ls2 = r.zTOC_RCM.prepfg_l12(bsd, swi, r, 0,       0,  r.zox, r.zno3, obj.DSO41, obj.DSO42);
+                % layer 3: zno3 < z < zso4, SO4 consumption by OM oxidation
+                rSO4.ls3 = r.zTOC_RCM.prepfg_l12(bsd, swi, r, obj.reac1, 0, r.zno3, zso4, obj.DSO41, obj.DSO42);
+                
+                % Work up from the bottom, matching solutions at boundaries
+                % Basis functions at bottom of layer 3 zso4
+                [ e3_zso4, dedz3_zso4, f3_zso4, dfdz3_zso4, g3_zso4, dgdz3_zso4] ...
+                    = r.zTOC_RCM.calcfg_l12(zso4, bsd, swi, r, obj.reac1,  0, rSO4.ls3);
+                
+                % Match at zno3, layer 2 - layer 3 (continuity and flux)
+                % basis functions at bottom of layer 2
+                [ e2_zno3, dedz2_zno3, f2_zno3, dfdz2_zno3, g2_zno3, dgdz2_zno3] ...
+                    = r.zTOC_RCM.calcfg_l12(r.zno3, bsd, swi, r,     0,             0, rSO4.ls2);
+                % ... and top of layer 3
+                [ e3_zno3, dedz3_zno3, f3_zno3, dfdz3_zno3, g3_zno3, dgdz3_zno3] ...
+                    = r.zTOC_RCM.calcfg_l12(r.zno3, bsd, swi, r, obj.reac1,  0, rSO4.ls3);
+                % match solutions at zno3 - continuous concentration and flux
+                [zno3.a, zno3.b, zno3.c, zno3.d, zno3.e, zno3.f] = benthic_utils.matchsoln(e2_zno3, f2_zno3, g2_zno3, dedz2_zno3, dfdz2_zno3, dgdz2_zno3, ...
+                    e3_zno3, f3_zno3, g3_zno3, dedz3_zno3, dfdz3_zno3, dgdz3_zno3, ...
+                    0, 0);
+                
+                % Match at zox, layer 1 - layer 2 (continuity, flux discontinuity from H2S source)
+                % flux of H2S to oxic interface (Source of SO4)
+                % NB: include methane region as AOM will produce sulphide as well..
+                %            FH2S = 0.0; %r.zTOC_RCM.calcReac(r.zno3, zso4, bsd.SO4C, bsd.SO4C, bsd, swi, r) + 0.0; % no secondary redox!
+                FH2S = r.zTOC_RCM.calcReac(r.zno3, zso4, bsd.SO4C, bsd, swi, r) ... % MULTIPLY BY 1/POR ????
+                    + bsd.gammaCH4.*r.zTOC_RCM.calcReac(zso4, bsd.zinf, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
+                % basis functions at bottom of layer 1
+                [ e1_zox, dedz1_zox, f1_zox, dfdz1_zox, g1_zox, dgdz1_zox] ...
+                    = r.zTOC_RCM.calcfg_l12(r.zox, bsd, swi, r, 0, 0, rSO4.ls1);
+                % basis functions at top of layer 2
+                [ e2_zox, dedz2_zox, f2_zox, dfdz2_zox, g2_zox, dgdz2_zox] ...
+                    = r.zTOC_RCM.calcfg_l12(r.zox, bsd, swi, r, 0, 0, rSO4.ls2);
+                % transform to use coeffs from l3
+                [e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox] = benthic_utils.xformsoln(e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
+                    zno3.a , zno3.b , zno3.c , zno3.d , zno3.e ,zno3.f);
+                
+                % match solutions at zox - continuous concentration, flux discontinuity from H2S ox
+                D = (r.zox <= bsd.zbio).*obj.DSO41 + (r.zox > bsd.zbio).*obj.DSO42;
+                
+                [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
+                    e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
+                    0, -r.zxf.*bsd.gammaH2S*(1-bsd.gammaFeS)*FH2S./D);
+                
+                % Solution at swi, top of layer 1
+                [ e1_0, dedz1_0, f1_0, dfdz1_0, g1_0, dgdz1_0] ...
+                    = r.zTOC_RCM.calcfg_l12(0, bsd, swi, r, 0 , 0, rSO4.ls1);
+                % transform to use coeffs from l3
+                [ e1_0, f1_0, g1_0, dedz1_0,  dfdz1_0, dgdz1_0]= benthic_utils.xformsoln(e1_0, f1_0, g1_0, dedz1_0, dfdz1_0, dgdz1_0, ...
+                    zox.a , zox.b , zox.c , zox.d , zox.e ,zox.f);
+                
+            end
             
             % Find solutions for two possible types of lower bc
             %  case 1  zero concentration at zso4
@@ -177,7 +235,11 @@ classdef benthic_zSO4
             tmpreac1    = bsd.MC.*bsd.gammaCH4;
             tmpreac2    = bsd.MC.*bsd.gammaCH4;
             %            FSO4 = 0.0;    % no secondary redox!
-            FSO4 = r.zTOC.calcReac(zso4, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);
+            if(swi.TwoG_OM_model)
+                FSO4 = r.zTOC.calcReac(zso4, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);
+            else
+                FSO4 = r.zTOC_RCM.calcReac(zso4, bsd.zinf, tmpreac1, bsd, swi, r);
+            end
             % TODO confirm (1-bsd.por)*  has been added (to k1 & k2 ?)
         end
         
@@ -193,18 +255,35 @@ classdef benthic_zSO4
                     D = obj.DSO42;
                 end
                 
-                if z <= r.zox   % layer 1
-                    [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC.calcfg_l12(z, bsd, swi, r, 0 , 0 , 0, rSO4.ls1);
-                    SO4     = r.rSO4.A1.*e + r.rSO4.B1.*f + g;
-                    flxSO4  = D.*(r.rSO4.A1.*dedz+r.rSO4.B1.*dfdz + dgdz);
-                elseif z <= r.zno3 % layer 2
-                    [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC.calcfg_l12(z, bsd, swi, r, 0 , 0 , 0, rSO4.ls2);
-                    SO4     = r.rSO4.A2.*e + r.rSO4.B2.*f + g;
-                    flxSO4  = D.*(r.rSO4.A2.*dedz+r.rSO4.B2.*dfdz + dgdz);
+                if(swi.TwoG_OM_model)
+                    if z <= r.zox   % layer 1
+                        [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC.calcfg_l12(z, bsd, swi, r, 0 , 0 , 0, rSO4.ls1);
+                        SO4     = r.rSO4.A1.*e + r.rSO4.B1.*f + g;
+                        flxSO4  = D.*(r.rSO4.A1.*dedz+r.rSO4.B1.*dfdz + dgdz);
+                    elseif z <= r.zno3 % layer 2
+                        [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC.calcfg_l12(z, bsd, swi, r, 0 , 0 , 0, rSO4.ls2);
+                        SO4     = r.rSO4.A2.*e + r.rSO4.B2.*f + g;
+                        flxSO4  = D.*(r.rSO4.A2.*dedz+r.rSO4.B2.*dfdz + dgdz);
+                    else
+                        [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC.calcfg_l12(z, bsd, swi, r, obj.reac1, obj.reac2 , 0, rSO4.ls3);
+                        SO4     = r.rSO4.A3.*e + r.rSO4.B3.*f + g;
+                        flxSO4  = D.*(r.rSO4.A3.*dedz+r.rSO4.B3.*dfdz + dgdz);
+                    end
                 else
-                    [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC.calcfg_l12(z, bsd, swi, r, obj.reac1, obj.reac2 , 0, rSO4.ls3);
-                    SO4     = r.rSO4.A3.*e + r.rSO4.B3.*f + g;
-                    flxSO4  = D.*(r.rSO4.A3.*dedz+r.rSO4.B3.*dfdz + dgdz);
+                    if z <= r.zox   % layer 1
+                        [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC_RCM.calcfg_l12(z, bsd, swi, r, 0 ,  0, rSO4.ls1);
+                        SO4     = r.rSO4.A1.*e + r.rSO4.B1.*f + g;
+                        flxSO4  = D.*(r.rSO4.A1.*dedz+r.rSO4.B1.*dfdz + dgdz);
+                    elseif z <= r.zno3 % layer 2
+                        [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC_RCM.calcfg_l12(z, bsd, swi, r, 0 ,  0, rSO4.ls2);
+                        SO4     = r.rSO4.A2.*e + r.rSO4.B2.*f + g;
+                        flxSO4  = D.*(r.rSO4.A2.*dedz+r.rSO4.B2.*dfdz + dgdz);
+                    else
+                        [ e, dedz, f, dfdz, g, dgdz]  = r.zTOC_RCM.calcfg_l12(z, bsd, swi, r, obj.reac1, 0, rSO4.ls3);
+                        SO4     = r.rSO4.A3.*e + r.rSO4.B3.*f + g;
+                        flxSO4  = D.*(r.rSO4.A3.*dedz+r.rSO4.B3.*dfdz + dgdz);
+                    end
+                    
                 end
                 
             else
