@@ -1,6 +1,7 @@
 classdef benthic_zTOC_RCM < handle
-    %Organic matter- multiG Fractions
-    %
+    %% Organic matter- multiG Fractions implemented by Philip Pika
+    %% Described in Pika et al. (2020) GMD
+
     % In bioturbated layer 1, each phase i (i=1,2) evolves according to:
     %  dCi/dt = DC * d^2 Ci/ dt^2 - w * dCi/dt - ki
     % in non-bioturbated layer 2,
@@ -176,7 +177,9 @@ classdef benthic_zTOC_RCM < handle
             PhiI1(isfinite(PhiI1)~=1) = bsd.tol_const;
             PhiII1(isfinite(PhiI1)~=1) = bsd.tol_const;
             PhiIII1(isfinite(PhiI1)~=1) = bsd.tol_const;
-            
+            if(isfinite(PhiI1)~=1)
+                warning('Phi is not finite!!!');
+            end
             ea11z = exp(r.a1.*z);
             eb11z = exp(r.b1.*z);
             % %             ea12z = exp(r.a12.*z);

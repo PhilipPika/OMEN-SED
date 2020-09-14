@@ -4,8 +4,8 @@
 % Hülse et al. (2018) GMD paper + Pika et al. (2020) GMD paper with RCM approximation
 % Email: dominik.huelse@ucr.edu or dominik.huelse@gmx.de
 
-% update from 0.9: included pyrite precipitation (implicitly) & gammaH2S dependent on BW oxygenation in Fortran code
-% update from 1.0: included the nG approximation of a Reactive Continuum Model (RCM) as described in Pika et al. (2020)
+% 1.0 updates from 0.9: included pyrite precipitation (implicitly) & gammaH2S dependent on BW oxygenation in Fortran code
+% 1.1 updates from 1.0: included the nG approximation of a Reactive Continuum Model (RCM) as described in Pika et al. (2020)
 %			- for now we kept the original representation of the 2G-model, but this could be replaced if the nG gives the same results
 
 % 1) Example for executing the model:
@@ -36,7 +36,7 @@
 %                     	  benthic_test.default_swi(): define sediment-water interface boundary consitions (e.g. bottom water concentrations)
 %                    	  benthic_test.run_OMEN(): execute OMEN-SED
 %                     	  benthic_test.plot_column(res, debug, swi, str_date): plot results (res) & save .EPS files ending in 'str_date'  
-%			  benthic_test.RCM(): approximation of the RCM witht parameters as specified in benthic_test.default_swi()
+%			  benthic_test.RCM(): approximation of the RCM with parameters as specified in benthic_test.default_swi()
 %   benthic_zTOC    	- Organic matter - 2 Fractions: change the degradation rate constants in this file!
 %                     	  also includes the functions dealing with matching across bioturbated boundary (i.e. prepfg_l12 & calcfg_l*)
 %   benthic_utils   	- Other utility functions for Generic Boundary Condition Matching 
