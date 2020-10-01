@@ -21,7 +21,7 @@ classdef benthic_main < handle
         z0  = 0;                                % surface
         zbio=10.0;                              % bioturbation depth (cm)
         zinf=100;                               %Inifinity (cm)
-        
+        loc_BW_O2_anoxia=20E-009;
         Dbio;                                   % bioturbation coefficient (cm2/yr) - calculated by internal fct. biorate()
         por=0.85;                               % porosity (-)
         tort=3.0;                               %tortuosity (-)
@@ -38,13 +38,15 @@ classdef benthic_main < handle
         NC2;                                    % N/C second TOC fraction (mol/mol)
         PC1;                                    % P/C first TOC fraction (mol/mol)
         PC2;                                    % P/C second TOC fraction (mol/mol)
+        FeIIIC;                                 % FeIII/C (mol/mol)
         SO4C;                                   % SO4/C (mol/mol)
         O2H2S;                                  % O2/H2S ratio for oxidation of H2S (mol/mol)
         DICC1;                                  % DIC/C until zSO4 (mol/mol)
         DICC2;                                  % DIC/C below zSO4 (mol/mol)
         MC;                                     % CH4/C (mol/mol)
         gamma=0.95;                           	% fraction of NH4 that is oxidised in oxic layer
-        gammaH2S=1.0;                         	% fraction of H2S that is oxidised in oxic layer
+        gammaH2S=0.95;                         	% fraction of H2S that is oxidised in oxic layer
+        gammaFe2=0.0;                           % fraction of Fe2 that is oxidised in oxic layer (to be calculated with Seb's fit to Cox and BW [O2])
         gammaFeS=0.0;                         	% fraction of H2S that is precipitated as pyrite
         gammaCH4=0.99;                         	% fraction of CH4 that is oxidised at SO4
         satSO4=0.0;                           	% SO4 saturation
@@ -53,9 +55,11 @@ classdef benthic_main < handle
         ALKROX;                                	% Aerobic degradation
         ALKRNIT;                               	% Nitrification
         ALKRDEN;                             	% Denitrification
+        ALKRFeIII;                              % FeIII reduction
         ALKRSUL;                              	% Sulfate reduction
         ALKRH2S;                               	% H2S oxydation
-        ALKRFeS;                               	% H2S oxydation
+        ALKRFe2;                               	% Fe2 oxydation
+        ALKRFeS;                               	% pyrite precipitation
         ALKRMET;                               	% Methanogenesis
         ALKRAOM;                               	% AOM
         
@@ -103,6 +107,7 @@ classdef benthic_main < handle
             obj.NC2= 16.0/106.0*obj.SD;        	% N/C second TOC fraction (mol/mol)
             obj.PC1=1/106*obj.SD;               % P/C first TOC fraction  1/106 (mol/mol)
             obj.PC2=1/106*obj.SD;               % P/C second TOC fraction 1/106 (mol/mol)
+            obj.FeIIIC=4.0;                     % FeIII/C (mol/mol)
             obj.SO4C=(138.0/212.0)*obj.SD;      % SO4/C (mol/mol) (was 0.5*obj.SD;)
             obj.O2H2S=2.0;                      % Mol of O2 to oxidize 1 mol H2S
             obj.DICC1=1.0*obj.SD;             	% DIC/C until zSO4 (mol/mol)
@@ -143,6 +148,7 @@ classdef benthic_main < handle
             c1 = 3;
             c2 = 10;
             w = w1/(1+(wdepth/z1)^c1) + w2/(1+(wdepth/z2)^c2);
+            w = 60/1000;    % To compare with Dale et al. (2015)
         end
         
         function Dbio = biorate(wdepth)

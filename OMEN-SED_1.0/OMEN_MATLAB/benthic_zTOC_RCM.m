@@ -25,11 +25,19 @@ classdef benthic_zTOC_RCM < handle
         
         function res = calc(obj, bsd, swi, res)
             % Calculate solution for TOC vs z
-            res.swi.C0 = swi.C0;
+%            res.swi.C0_nonbio = swi.C0_nonbio;
             
             rTOC_RCM.a1=(bsd.w-sqrt(bsd.w.^2+4.*obj.DC1.*obj.k))./(2.*obj.DC1);
             rTOC_RCM.b1=(bsd.w+sqrt(bsd.w.^2+4.*obj.DC1.*obj.k))./(2.*obj.DC1);
             rTOC_RCM.a2=(-obj.k./bsd.w);
+         	% calculate bioturbated SWI
+            % comment C0i calculation for calculating observed profiles &
+            % sensitivity analysis (as we have concentrations C0i for this)
+            swi.C0i = (swi.Fnonbioi.*(-rTOC_RCM.a1.*exp(rTOC_RCM.a1*bsd.zbio)+rTOC_RCM.b1.*exp(rTOC_RCM.b1*bsd.zbio)))./(-obj.DC1.*rTOC_RCM.b1.*rTOC_RCM.a1.*exp(rTOC_RCM.b1.*bsd.zbio) + obj.DC1.*rTOC_RCM.b1.*rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio) + ...
+                obj.DC1.*rTOC_RCM.b1.*rTOC_RCM.a1.*bsd.por.*exp(rTOC_RCM.b1.*bsd.zbio) - obj.DC1.*rTOC_RCM.b1.*rTOC_RCM.a1.*bsd.por.*exp(rTOC_RCM.a1.*bsd.zbio) - bsd.w.*rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio) + bsd.w.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio) + ...
+                bsd.w.*bsd.por.*rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio) - bsd.w.*bsd.por.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio));
+            res.swi.C0i = swi.C0i;
+
             rTOC_RCM.A1 =-(swi.C0i.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio))./(rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio)-rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio)+bsd.tol_const);
             rTOC_RCM.A2 =(rTOC_RCM.A1.*(exp(rTOC_RCM.a1.*bsd.zbio)-exp(rTOC_RCM.b1.*bsd.zbio))+swi.C0i.*exp(rTOC_RCM.b1.*bsd.zbio))./(exp(rTOC_RCM.a2.*bsd.zbio)+bsd.tol_const);
             Names = fieldnames(rTOC_RCM);
