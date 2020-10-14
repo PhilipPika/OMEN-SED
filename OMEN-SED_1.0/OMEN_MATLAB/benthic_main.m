@@ -16,7 +16,7 @@ classdef benthic_main < handle
         
         %sediment characteristics
         rho_sed=2.5;                            % sediment density (g/cm3)
-        wdepth=500.0;                           % water depth (m)
+        wdepth=1500.0;                           % water depth (m)
         w;                                      % burial velocity  (cm/yr) - calculated by internal fct. sedrate()
         z0  = 0;                                % surface
         zbio=10.0;                              % bioturbation depth (cm)
@@ -41,11 +41,13 @@ classdef benthic_main < handle
         FeIIIC;                                 % FeIII/C (mol/mol)
         SO4C;                                   % SO4/C (mol/mol)
         O2H2S;                                  % O2/H2S ratio for oxidation of H2S (mol/mol)
+        FeIIIH2S;                            	% Mol of FeIII to oxidize 1 mol H2S
         DICC1;                                  % DIC/C until zSO4 (mol/mol)
         DICC2;                                  % DIC/C below zSO4 (mol/mol)
         MC;                                     % CH4/C (mol/mol)
         gamma=0.95;                           	% fraction of NH4 that is oxidised in oxic layer
         gammaH2S=0.95;                         	% fraction of H2S that is oxidised in oxic layer
+        gammaH2SFe=0.0;                       	% fraction of H2S that is oxidised with FeIII  (assume after zFeIII only sulfate reduction, as we don't know zSO4 yet)
         gammaFe2=0.0;                           % fraction of Fe2 that is oxidised in oxic layer (to be calculated with Seb's fit to Cox and BW [O2])
         gammaFeS=0.0;                         	% fraction of H2S that is precipitated as pyrite
         gammaCH4=0.99;                         	% fraction of CH4 that is oxidised at SO4
@@ -71,7 +73,10 @@ classdef benthic_main < handle
         %fzerooptions = optimset('Display','iter');
         %fzerooptions = optimset('Display','final');
         %fzerooptions = optimset('TolX',0.001);
-        fzerooptions = optimset('TolX',100*eps);
+        fzerooptions = optimset('TolX',100*eps);        % 2.2e-14
+        tol_Fe3 = 10^4*eps;
+%        fzerooptions_Fe3 = optimset('TolX',10^4*eps);   % 2.2e-12
+        fzerooptions_Fe3 = optimset('Display','iter');
     end
     
     methods
@@ -110,6 +115,7 @@ classdef benthic_main < handle
             obj.FeIIIC=4.0;                     % FeIII/C (mol/mol)
             obj.SO4C=(138.0/212.0)*obj.SD;      % SO4/C (mol/mol) (was 0.5*obj.SD;)
             obj.O2H2S=2.0;                      % Mol of O2 to oxidize 1 mol H2S
+            obj.FeIIIH2S=8.0/obj.SD;                   % Mol of FeIII to oxidize 1 mol H2S
             obj.DICC1=1.0*obj.SD;             	% DIC/C until zSO4 (mol/mol)
             obj.DICC2=0.5*obj.SD;             	% DIC/C below zSO4 (mol/mol)
             obj.MC=0.5*obj.SD;                	% CH4/C (mol/mol)
