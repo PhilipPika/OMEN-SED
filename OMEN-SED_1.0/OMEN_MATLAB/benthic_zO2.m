@@ -67,7 +67,8 @@ classdef benthic_zO2
             r.flxswiO2 = flxswiO2;
             
             % OUTPUT FOR FLUX of reduxed substances at z_ox
-            %fprintf('zox = %g Approx F_O2 flux (mol cm^{-2} yr^{-1}) %g \n',  r.zox, obj.calcFO2(r.zox,bsd, swi, r));
+            Fredzox = obj.calcFO2(r.zox,bsd, swi, r);
+            fprintf('zox = %g Approx F_O2 flux (mol cm^{-2} yr^{-1}) %g \n',  r.zox, Fredzox);
             
         end
         
@@ -146,10 +147,11 @@ classdef benthic_zO2
             
             %            FO2 = 0.0; % no secondary redox!
             if(swi.TwoG_OM_model)
-                FO2 = zox./(bsd.zoxgf + zox).*r.zTOC.calcReac(zox, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);
+                FO2 = zox./(bsd.zoxgf + zox).*r.zTOC.calcReac(zox, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r) + bsd.gammaFe2.*swi.Flux_FeIII0;  % taking into account approximated Fe2-flux to zox, just as 'gammaFe2 * Influx_Fe3+'
+                % FO2 = zox./(bsd.zoxgf + zox).*r.zTOC.calcReac(zox, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);                                  % not taking into account iron re-oxidation
             else
-                FO2 = zox./(bsd.zoxgf + zox).*r.zTOC_RCM.calcReac(zox, bsd.zinf, tmpreac1, bsd, swi, r);
-                
+                FO2 = zox./(bsd.zoxgf + zox).*r.zTOC_RCM.calcReac(zox, bsd.zinf, tmpreac1, bsd, swi, r) + bsd.gammaFe2.*swi.Flux_FeIII0;        % taking into account approximated Fe2-flux to zox, just as 'gammaFe2 * Influx_Fe3+'
+                % FO2 = zox./(bsd.zoxgf + zox).*r.zTOC_RCM.calcReac(zox, bsd.zinf, tmpreac1, bsd, swi, r);        % not taking into account iron re-oxidation             
             end
             % NB (1-bsd.por)/bsd.por  has been included in OC etc stoich factors, so this is flux / cm^2 pore area
             
@@ -160,8 +162,8 @@ classdef benthic_zO2
     
     tmpreac1_N=2*bsd.gamma*bsd.NC1;
     tmpreac2_N=2*bsd.gamma*bsd.NC2;
-    tmpreac1_S=bsd.O2H2S*bsd.SO4C;
-    tmpreac2_S=bsd.O2H2S*bsd.SO4C;
+    tmpreac1_S=bsd.gammaH2S*(1-bsd.gammaFeS)*bsd.O2H2S*bsd.SO4C;
+    tmpreac2_S=bsd.gammaH2S*(1-bsd.gammaFeS)*bsd.O2H2S*bsd.SO4C;
     
     %tmpreac1=bsd.OC+2*bsd.gamma*bsd.NC1;
     %tmpreac2=bsd.OC+2*bsd.gamma*bsd.NC2;

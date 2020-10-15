@@ -30,6 +30,7 @@ classdef benthic_test
             swi.T = 8.0;                                        % temperature (degree C)
             
             swi.Test_Dale = true;
+            swi.plot_fig = false;                                % plot the sediment profiles
             
             swi.Nitrogen=true;                                  % calculate N (true/false)
             swi.Iron=true;                                      % calculate Fe (true/false)
@@ -101,7 +102,7 @@ classdef benthic_test
             Mean_OM = 1/x * 100*12/res.bsd.rho_sed*res.zTOC.calcOM(0.0, x, 1, 1, res.bsd, res.swi, res);
         end
         
-        function [Cox_rate, Flux_Fe2_Dale_units, res]  = run_OMEN_RCM()
+        function [Cox_rate, Flux_Fe2_Dale_units, res, Output]  = run_OMEN_RCM()
             % run OMEN-SED with default SWI conditions as in default_swi()
             clear
             swi = benthic_test.default_swi();
@@ -112,27 +113,28 @@ classdef benthic_test
                 swi.p_a = 0.1; 
                 swi.p_nu = 0.125;
               	swi.POC_flux = [0.5 1 2 4 6 8 10 12 14 16];
-                 swi.POCi = 10;                
+                 swi.POCi = 5;                
             end
 
             res=benthic_test.test_benthic(1,swi);
             % set date-time or string going into plot function
             str_date = [num2str(res.swi.nG) 'G_a=' num2str(res.swi.p_a) '_nu=' num2str(res.swi.p_nu) '_O20_' num2str(res.swi.O20)];
-            benthic_test.plot_column(res, false, swi, str_date)
-            benthic_test.plot_TOC(res, false, swi, str_date)
+            if(swi.plot_fig)
+                benthic_test.plot_column(res, false, swi, str_date)
+                benthic_test.plot_TOC(res, false, swi, str_date)
+            end
             % calculate depth integrated OM degradation rates (this is
             % wrong - use the fluxes of TOC at the boundaries - see test_benthic)
             swi.C0i = res.swi.C0i;
-            Cox_rate.Cox_total = res.zTOC_RCM.calcReac(0.0, res.bsd.zinf, 1*(1-res.bsd.por), res.bsd, swi, res);
-            Cox_rate.Cox_aerobic = res.zTOC_RCM.calcReac(0.0, res.zox, 1*(1-res.bsd.por), res.bsd, swi, res);
+            Cox_rate(1,1) = res.zTOC_RCM.calcReac(0.0, res.bsd.zinf, 1*(1-res.bsd.por), res.bsd, swi, res);
+            Cox_rate(1,2) = res.zTOC_RCM.calcReac(0.0, res.zox, 1*(1-res.bsd.por), res.bsd, swi, res)/Cox_rate(1,1)*100;
             if(swi.Nitrogen)
-                Cox_rate.Cox_denitr = res.zTOC_RCM.calcReac(res.zox, res.zno3, 1*(1-res.bsd.por), res.bsd, swi, res);
+                Cox_rate(1,3) = res.zTOC_RCM.calcReac(res.zox, res.zno3, 1*(1-res.bsd.por), res.bsd, swi, res)/Cox_rate(1,1)*100;
             end
             if(res.swi.Iron)
-                Cox_rate.Cox_FeIII = res.zTOC_RCM.calcReac(res.zno3, res.zfeIII,1*(1-res.bsd.por), res.bsd, swi, res);
+                Cox_rate(1,4) = res.zTOC_RCM.calcReac(res.zno3, res.zfeIII,1*(1-res.bsd.por), res.bsd, swi, res)/Cox_rate(1,1)*100;
             end
-            Cox_rate.Cox_sulfate = res.zTOC_RCM.calcReac(res.zfeIII,res.zso4, 1*(1-res.bsd.por), res.bsd, swi, res)
-            Cox_rate.Total_rate = Cox_rate.Cox_aerobic + Cox_rate.Cox_denitr + Cox_rate.Cox_FeIII + Cox_rate.Cox_sulfate
+            Cox_rate(1,5) = res.zTOC_RCM.calcReac(res.zfeIII,res.zso4, 1*(1-res.bsd.por), res.bsd, swi, res)/Cox_rate(1,1)*100;
 
             if(swi.Test_Dale)
                 % compare results with Dale
@@ -153,6 +155,19 @@ classdef benthic_test
             OM_10=C_10* 100*12/res.bsd.rho_sed;
             x = 10;
             Mean_OM = 1/x * 100*12/res.bsd.rho_sed*res.zTOC_RCM.calcOM(0.0, x, 1, res.bsd, swi, res);
+            
+            Output(1,1) = res.flxswiH2S;
+            Output(1,2) = res.flxswiSO4;
+            Output(1,3) = res.flxswiFe2;
+            Output(1,4)  = res.flxswiFe2 *10^6 *100^2 /365;                   % in units of umol m-2 d-1 as in Dale ea. 2015, Fig. 3
+            Output(1,5) = res.flxswiFeIII;
+            Output(1,6) = res.flxswiNH4;
+            Output(1,7) = res.flxswiNO3;
+            Output(1,8) = res.flxswiO2;
+            Output(1,9) = res.zox;
+            Output(1,10) = res.zno3;
+            Output(1,11) = res.zfeIII;
+            Output(1,12) = res.zso4;
         end
         
         
@@ -214,7 +229,6 @@ classdef benthic_test
                 [F_TOC_inf, F_TOC1_inf] = res.zTOC_RCM.calcCflx(res.bsd.zinf, res.bsd, res.swi, res);
 
                 Cox_total_diff = (F_TOC_swi-F_TOC_inf)*1000 *100^2/365;      % in units of mmol m-2 d-1 as in Dale ea. 2015, Fig. 2a
-                Flux_Fe2_Dale_units(2*i-1) = res.flxswiFe2 *10^6 *100^2 /365;                   % in units of umol m-2 d-1 as in Dale ea. 2015, Fig. 3
                 Flux_Fe2_Dale_units(2*i-1) = res.flxswiFe2 *10^6 *100^2 /365;                   % in units of umol m-2 d-1 as in Dale ea. 2015, Fig. 3
                 Flux_Fe2_Dale_units(2*i) = nan;                   % in units of umol m-2 d-1 as in Dale ea. 2015, Fig. 3
             end
@@ -322,7 +336,7 @@ classdef benthic_test
                         % Case zno3 < zFe3 < zbio: calcConcentration() fails
                         % use simple conversion and iterate from there
                         res.swi.FeIII0= res.swi.Flux_FeIII0/((1-res.bsd.por)*res.bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
-%                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
+                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
                         fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration                    
                     else
 %                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
@@ -330,18 +344,20 @@ classdef benthic_test
                     end
                 end
                 
-                if(fun0 > res.bsd.tol_Fe3)  % initial guess above not good enough
+                if(abs(fun0) > res.bsd.tol_Fe3)  % initial guess above not good enough
                     
                     if(fun0 > 0)    % Fe3+ concentration too high
 %                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 1e-10);
 %                         test1_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
                         res.swi.FeIII0=fzero(fun,[1e-10, res.swi.FeIII0],res.bsd.fzerooptions_Fe3);    % NOTE: Find better way for lower boundary
                     else    % Fe3+ concentration too low
-                        res.swi.FeIII0=fzero(fun,[res.swi.FeIII0, 2*res.swi.FeIII0],res.bsd.fzerooptions_Fe3);    % NOTE: Find better way for lower boundary
+%                          test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);                        
+%                          test1_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 0.5*res.swi.FeIII0);
+%                          test2_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 10*res.swi.FeIII0);
+%                          test3_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 1e+6);
+                        res.swi.FeIII0=fzero(fun,[res.swi.FeIII0, 1e+6],res.bsd.fzerooptions_Fe3);    % NOTE: Find better way for upper boundary - not sure if this works anyway (at least not for gammaFe2 >= 0.99)
                     end                    
-                end
-                    
-
+                end                    
                 res = res.zFeIII.calc(res.bsd, res.swi, res);
             else
                 res.zfeIII = res.zno3;
