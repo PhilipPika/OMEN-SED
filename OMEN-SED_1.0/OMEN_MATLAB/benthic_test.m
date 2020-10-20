@@ -30,7 +30,7 @@ classdef benthic_test
             swi.T = 8.0;                                        % temperature (degree C)
             
             swi.Test_Dale = true;
-            swi.plot_fig = false;                                % plot the sediment profiles
+            swi.plot_fig = true;                                % plot the sediment profiles
             
             swi.Nitrogen=true;                                  % calculate N (true/false)
             swi.Iron=true;                                      % calculate Fe (true/false)
@@ -113,7 +113,7 @@ classdef benthic_test
                 swi.p_a = 0.1; 
                 swi.p_nu = 0.125;
               	swi.POC_flux = [0.5 1 2 4 6 8 10 12 14 16];
-                 swi.POCi = 5;                
+              	swi.POCi = 5;                
             end
 
             res=benthic_test.test_benthic(1,swi);
