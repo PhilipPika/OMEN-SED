@@ -46,9 +46,10 @@ classdef benthic_main < handle
         DICC2;                                  % DIC/C below zSO4 (mol/mol)
         MC;                                     % CH4/C (mol/mol)
         gamma=0.95;                           	% fraction of NH4 that is oxidised in oxic layer
-        gammaH2S=0.95;                         	% fraction of H2S that is oxidised in oxic layer
+        gammaH2S=0.0;                         	% fraction of H2S that is oxidised in oxic layer
         gammaH2SFe=0.0;                       	% fraction of H2S that is oxidised with FeIII  (assume after zFeIII only sulfate reduction, as we don't know zSO4 yet)
-        gammaFe2=0.95;                           % fraction of Fe2 that is oxidised in oxic layer (to be calculated with Seb's fit to Cox and BW [O2])
+        gammaFe2=0.5;                           % fraction of Fe2 that is oxidised in oxic layer (to be calculated with Seb's fit to Cox and BW [O2])
+        gammaFeS2=0.5;                         	% fraction of Fe2 that is precipitated as pyrite
         gammaFeS=0.0;                         	% fraction of H2S that is precipitated as pyrite
         gammaCH4=0.99;                         	% fraction of CH4 that is oxidised at SO4
         satSO4=0.0;                           	% SO4 saturation

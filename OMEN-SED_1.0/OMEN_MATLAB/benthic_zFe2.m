@@ -11,6 +11,8 @@ classdef benthic_zFe2
         
         reac1;
         reac2;
+        
+         gammaFe2_bio;           % fraction of Fe2 that is oxidised in oxic layer (to be calculated with Seb vd Velde's fit to Cox and BW [O2] , that's why it is here)
     end
     
     methods
@@ -21,6 +23,14 @@ classdef benthic_zFe2
             %reactive terms: OM degradation
             obj.reac1=bsd.FeIIIC*bsd.SD;    % the *SD is needed here as Fe2 is dissolved
             obj.reac2=bsd.FeIIIC*bsd.SD;
+            
+            % clculate gamma for fraction of Fe2 re-xidation at zox, using
+            % Seb vd Velde's fit
+            a=0.89;
+            b=-3.83; 
+            c=1.45;
+%            x = log10(Cox/swi.O20)
+            obj.gammaFe2_bio = 0; %a*exp((x-b)^2/(2*c^2));
             
         end
         
@@ -58,7 +68,8 @@ classdef benthic_zFe2
            	D  = (r.zfeIII <= bsd.zbio).*obj.DFe21 + (r.zfeIII > bsd.zbio).*obj.DFe22;
             [zfeIII.a, zfeIII.b, zfeIII.c, zfeIII.d, zfeIII.e, zfeIII.f] = benthic_utils.matchsoln(e3_zfeIII, f3_zfeIII, g3_zfeIII, dedz3_zfeIII, dfdz3_zfeIII, dgdz3_zfeIII, ...
                 e4_zfeIII, f4_zfeIII, g4_zfeIII, dedz4_zfeIII, dfdz4_zfeIII, dgdz4_zfeIII, ...
-                0, -bsd.gammaCH4.*zfeIIIFFe2./D);
+                0, zfeIIIFFe2./D);
+%                0, -bsd.gammaCH4.*zfeIIIFFe2./D);  % use - for source of Fe2
 
             % Match at zno3, layer 2 - layer 3 (continuity and flux)
             % basis functions at bottom of layer 2
@@ -99,8 +110,8 @@ classdef benthic_zFe2
             
             [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
                 e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
-                0, r.zxf.*bsd.gammaFe2.*(1-bsd.gammaFeS)*zoxFFe2./D);
-                % with pyrite:      0, r.zxf.*bsd.gammaFe2.*(1-bsd.gammaFeS)*zoxFFe2./D);
+                0, r.zxf.*bsd.gammaFe2.*zoxFFe2./D);
+                % with pyrite:      0, r.zxf.*bsd.gammaFe2.*zoxFFe2./D);
                	% without pyrite:   0, r.zxf.*bsd.gammaFe2.*zoxFFe2./D);
                 
             % Solution at swi, top of layer 1
@@ -132,14 +143,18 @@ classdef benthic_zFe2
             % ... and top of layer 4
             [ e4_zfeIII, dedz4_zfeIII, f4_zfeIII, dfdz4_zfeIII, g4_zfeIII, dgdz4_zfeIII] ...
                 = r.zTOC_RCM.calcfg_l12(r.zfeIII, bsd, swi, r,  0,  0, rFe2.ls4);
+            %flux of Fe2 consumed at zFeIII, reacts with flux of H2S from below is precipitated as pyrite (Sink of Fe2)
+            zfeIIIFFe2 = r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, obj.reac1, bsd, swi, r)*bsd.gammaFeS2; 
+%            zfeIIIFFe2 = r.swi.Flux_FeIII0*1.0;  % 
+            zfeIIIFH2S = r.zTOC_RCM.calcReac(r.zfeIII, bsd.zinf, bsd.SO4C, bsd, swi, r); % assume zso4 = zinf
             %flux of Fe2 produced below zFeIII - oxidation of H2S by FeIII (Source of Fe2)
-            zfeIIIFFe2 = 0.0;  % no Fe2 production below zFeIII -- DH - TODO:  Check 24.07.20
 %            zfeIIIFFe2 = r.zTOC_RCM.calcReac(r.zfeIII, bsd.zinf, bsd.MC, bsd.MC, bsd, swi, r); % MULTIPLY BY 1/POR ????
             % match solutions at zfeIII - continuous concentration and flux
             D  = (r.zfeIII <= bsd.zbio).*obj.DFe21 + (r.zfeIII > bsd.zbio).*obj.DFe22;
             [zfeIII.a, zfeIII.b, zfeIII.c, zfeIII.d, zfeIII.e, zfeIII.f] = benthic_utils.matchsoln(e3_zfeIII, f3_zfeIII, g3_zfeIII, dedz3_zfeIII, dfdz3_zfeIII, dgdz3_zfeIII, ...
                 e4_zfeIII, f4_zfeIII, g4_zfeIII, dedz4_zfeIII, dfdz4_zfeIII, dgdz4_zfeIII, ...
-                0, -bsd.gammaCH4.*zfeIIIFFe2./D);
+                0, zfeIIIFFe2./D);
+%                0, -bsd.gammaCH4.*zfeIIIFFe2./D);  % use - for source of Fe2
 
             % Match at zno3, layer 2 - layer 3 (continuity and flux)
             % basis functions at bottom of layer 2
@@ -158,10 +173,10 @@ classdef benthic_zFe2
             
             
             % Match at zox, layer 1 - layer 2 (continuity, flux discontinuity from Fe2 source)
-            %flux of Fe2 to oxic interface (from all sources of Fe2 below)
+            % flux of Fe2 to oxic interface (from all sources of Fe2 below)
             % NB: include methane region as AOM will produce sulphide as well..
 %            zoxFFe2 = 0.0;  % no secondary redox! -- DH - TODO: Check 24.07.20
-            zoxFFe2 = r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, obj.reac1, bsd, swi, r);   
+            zoxFFe2 = r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, obj.reac1, bsd, swi, r)*(1-bsd.gammaFeS2);   
 %                + r.zTOC_RCM.calcReac(r.zfeIII, bsd.zinf, bsd.MC, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
             
             % Dom 24.02.2016: actually should be 2 integrals for Fe2 produced: SO4-reduction + AOM (see documentation, but has the same reac const = 0.5) :
@@ -181,8 +196,8 @@ classdef benthic_zFe2
             
             [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
                 e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
-                0, r.zxf.*bsd.gammaFe2.*(1-bsd.gammaFeS)*zoxFFe2./D);
-                % with pyrite:      0, r.zxf.*bsd.gammaFe2.*(1-bsd.gammaFeS)*zoxFFe2./D);
+                0, r.zxf.*bsd.gammaFe2*zoxFFe2./D);
+                % with pyrite:      0, r.zxf.*bsd.gammaFe2*zoxFFe2./D);
                	% without pyrite:   0, r.zxf.*bsd.gammaFe2.*zoxFFe2./D);
                 
             % Solution at swi, top of layer 1

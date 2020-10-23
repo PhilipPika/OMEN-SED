@@ -30,7 +30,7 @@ classdef benthic_test
             swi.T = 8.0;                                        % temperature (degree C)
             
             swi.Test_Dale = true;
-            swi.plot_fig = true;                                % plot the sediment profiles
+            swi.plot_fig = false;                                % plot the sediment profiles
             
             swi.Nitrogen=true;                                  % calculate N (true/false)
             swi.Iron=true;                                      % calculate Fe (true/false)
@@ -262,23 +262,13 @@ classdef benthic_test
             
             res.swi = swi;
             
-            % calculate
+            % initialize then calculate
             if(swi.TwoG_OM_model)
                 res.zTOC = benthic_zTOC(res.bsd);
             else
                 res.zTOC_RCM = benthic_zTOC_RCM(res.bsd);
             end
-            res.zO2 = benthic_zO2(res.bsd, res.swi);
-            res.zNO3 = benthic_zNO3(res.bsd, res.swi);
-            res.zFeIII = benthic_zFeIII(res.bsd, res.swi);                      
-            res.zSO4 = benthic_zSO4(res.bsd, res.swi);
-            res.zNH4 = benthic_zNH4(res.bsd, res.swi);
-            res.zFe2 = benthic_zFe2(res.bsd, res.swi);
-            res.zH2S = benthic_zH2S(res.bsd, res.swi);
-            res.zPO4_M = benthic_zPO4_M(res.bsd, res.swi);
-            res.zDIC = benthic_zDIC(res.bsd, res.swi);
-            res.zALK = benthic_zALK(res.bsd, res.swi);
-            
+   
             tic;
             if(swi.TwoG_OM_model)
                 res = res.zTOC.calc(res.bsd,res.swi, res);
@@ -293,8 +283,18 @@ classdef benthic_test
                 res = res.zTOC_RCM.calc(res.bsd,res.swi, res);
                 O2_demand_flux = -(sum(res.swi.Fnonbioi))*res.bsd.OC/((1-res.bsd.por)./res.bsd.por);
             end
-            
-            
+            Cox_total = res.zTOC_RCM.calcReac(0.0, res.bsd.zinf, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365; % calculate in mmol/(m2 d) for Seb's parameteriztion
+            res.zO2 = benthic_zO2(res.bsd, res.swi);
+            res.zNO3 = benthic_zNO3(res.bsd, res.swi);
+            res.zFeIII = benthic_zFeIII(res.bsd, res.swi);                      
+            res.zSO4 = benthic_zSO4(res.bsd, res.swi);
+            res.zNH4 = benthic_zNH4(res.bsd, res.swi);
+            res.zFe2 = benthic_zFe2(res.bsd, res.swi);
+            res.zH2S = benthic_zH2S(res.bsd, res.swi);
+            res.zPO4_M = benthic_zPO4_M(res.bsd, res.swi);
+            res.zDIC = benthic_zDIC(res.bsd, res.swi);
+            res.zALK = benthic_zALK(res.bsd, res.swi);
+         
 % %     change zbio and gammaH2S depending on BW oxygenation:
 % %             if(res.swi.O20<=loc_BW_O2_anoxia)   % anoxic sediments?
 % %                 bsd.zbio = 0.01;        % decrease bioturbation depth
@@ -327,7 +327,16 @@ classdef benthic_test
                     % enough to correct SWI-concentration
                     res.swi.FeIII0= res.swi.Flux_FeIII0/((1-res.bsd.por)*res.bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
                     test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
-                    fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration                    
+                 	% try zero flux at zinf and see if we have any FeIII left, also
+                    % calculate [FeIII] at zinf for advective loss
+                    [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2); 
+                    if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried                        
+                        fun0 = 0.0;     % use the first guess for res.swi.FeIII0
+                        % FOR MASS BALANCE WITH cGENIE MAKE SURE THE
+                        % REMAINING INFLUX OF Fe3+ IS BURIED IN SEDIMENTS!!!
+                    else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
+                        fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration     
+                    end
                 else
                     % SWI-concentration of Fe3+ is affected by Fe-reduction
                     % -> take biodiffusion and Fe-reduction into account
@@ -338,9 +347,16 @@ classdef benthic_test
                         res.swi.FeIII0= res.swi.Flux_FeIII0/((1-res.bsd.por)*res.bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
                          test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
                         fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration                    
-                    else
+                    else  
+                 	% try zero flux at zinf and see if we have any FeIII left, also
+                    % calculate [FeIII] at zinf for advective loss
+                    [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2); 
+                    if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried                        
+                        fun0 = 0.0;     % use the first guess for res.swi.FeIII0
+                    else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
 %                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
-                        fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
+                        fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration     
+                    end
                     end
                 end
                 

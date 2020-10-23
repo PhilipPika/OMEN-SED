@@ -33,19 +33,7 @@ classdef benthic_zFeIII
         end
         
         function r = calc(obj, bsd, swi, r)
-            
-%             % Calculate SWI-concentration of Fe3+ from input flux
-%             if(r.zno3 > bsd.zbio )
-%                % SWI-concentration of Fe3+ is not affected by Fe-reduction
-%                % -> use simple conversion
-%                swi.FeIII0= swi.Flux_FeIII0/((1-bsd.por)*bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
-%             else
-%                 % SWI-concentration of Fe3+ is affected by Fe-reduction 
-%                 % -> take biodiffusion and Fe-reduction into account
-%                 swi.FeIII0 = obj.calcConcentration(bsd, swi, r, swi.Flux_FeIII0);
-%                 
-%             end
-%             
+                       
             % Iteratively solve for zfeIII
             
             % try zero flux at zinf and see if we have any FeIII left, also
@@ -146,8 +134,8 @@ classdef benthic_zFeIII
                 
                 [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
                     e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
-                    0, -r.zxf.*bsd.gammaFe2.*(1-bsd.gammaFeS)*FFe2./D);
-                % with pyrite:      0, -r.zxf.*bsd.gammaFe2.*(1-bsd.gammaFeS)*FFe2./D);
+                    0, -r.zxf.*bsd.gammaFe2*FFe2./D);
+                % with pyrite:      0, -r.zxf.*bsd.gammaFe2*FFe2./D);
                	% without pyrite:   0, -r.zxf.*bsd.gammaFe2.*FFe2./D);
                 
                 % Solution at swi, top of layer 1
@@ -209,8 +197,8 @@ classdef benthic_zFeIII
                 
                 [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
                     e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
-                    0, -r.zxf.*bsd.gammaFe2.*(1-bsd.gammaFeS)*FFe2./D);
-                % with pyrite:      0, -r.zxf.*bsd.gammaFe2.*(1-bsd.gammaFeS)*FFe2./D);
+                    0, -r.zxf.*bsd.gammaFe2*FFe2./D);
+                % with pyrite:      0, -r.zxf.*bsd.gammaFe2*FFe2./D);
                	% without pyrite:   0, -r.zxf.*bsd.gammaFe2.*FFe2./D);                
 
                 % Solution at swi, top of layer 1
@@ -274,8 +262,8 @@ classdef benthic_zFeIII
             %% Calculate FeIII consumption below zfeIII, by organic matter and indirectly via methane oxidation
             % no need to simulate FeIII consumption from Fe2 from below zfeIII (bc it is not produced there)
             % but FeIII is used to oxidize some of the H2S produced!
-            tmpreac1    = bsd.gammaH2SFe*(1-bsd.gammaFeS)*bsd.FeIIIH2S*bsd.SO4C;
-            tmpreac2    = bsd.gammaH2SFe*(1-bsd.gammaFeS)*bsd.FeIIIH2S*bsd.SO4C;
+            tmpreac1    = bsd.gammaH2SFe*bsd.FeIIIH2S*bsd.SO4C;
+            tmpreac2    = bsd.gammaH2SFe*bsd.FeIIIH2S*bsd.SO4C;
             %             FFeIII = r.zTOC.calcReac(zfeIII, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);
             
             if(swi.TwoG_OM_model)

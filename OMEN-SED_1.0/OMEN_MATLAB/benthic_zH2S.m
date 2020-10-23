@@ -17,8 +17,8 @@ classdef benthic_zH2S
             obj.DH2S2=(obj.qdispH2S+obj.adispH2S*swi.T).*bsd.dispFactor;          	% H2S diffusion coefficient in non-bioturbated layer (cm2/yr)
             
             %reactive terms: OM degradation
-            obj.reac1=(1-bsd.gammaFeS)*bsd.SO4C;
-            obj.reac2=(1-bsd.gammaFeS)*bsd.SO4C;
+            obj.reac1=bsd.SO4C;     % was with pyrite without Fe: (1-bsd.gammaFeS)*bsd.SO4C;
+            obj.reac2=bsd.SO4C;     % was with pyrite without Fe: (1-bsd.gammaFeS)*bsd.SO4C;
             
         end
         
@@ -117,7 +117,7 @@ classdef benthic_zH2S
                 
                 [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
                     e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
-                    0, r.zxf.*bsd.gammaH2S.*(1-bsd.gammaFeS)*zoxFH2S./D);
+                    0, r.zxf.*bsd.gammaH2S.*zoxFH2S./D);
                 % Dominik 24.02.2016 think it should be -r.zxf.*(1-bsd.gammaH2S).*zoxFH2S./D -> but changes profile significantly!
                 % Dominik 24.02.2016 was r.zxf.*zoxFH2S./D    need gammaH2S here!
                 % Solution at swi, top of layer 1
@@ -172,10 +172,21 @@ classdef benthic_zH2S
                 % ... transformed to use coeffs from l5
                 [e4_zfeIII, f4_zfeIII, g4_zfeIII, dedz4_zfeIII, dfdz4_zfeIII, dgdz4_zfeIII] = benthic_utils.xformsoln(e4_zfeIII, f4_zfeIII, g4_zfeIII, dedz4_zfeIII, dfdz4_zfeIII, dgdz4_zfeIII, ...
                     zso4.a , zso4.b , zso4.c , zso4.d , zso4.e ,zso4.f);
+             	%flux of H2S consumed at zFeIII, it reacts with flux of Fe2 from above and is precipitated as pyrite (Sink of H2S)
+                % calculate flux of Fe2+ available for pyrite precipitation
+                zfeIIIFFe2 = (r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, bsd.FeIIIC*bsd.SD, bsd, swi, r) + bsd.gammaCH4.*r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r))*bsd.gammaFeS2; 
+             	% as a test calculate H2S flux from below (should be latger
+             	% than what is precipitated as pyrite
+                zoxFH2S_test = r.zTOC_RCM.calcReac(r.zfeIII, r.zso4, bsd.SO4C, bsd, swi, r) ... % MULTIPLY BY 1/POR ????
+                    + r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
+
                 % match solutions at zfeIII - continuous concentration and flux
+                D  = (r.zfeIII <= bsd.zbio).*obj.DH2S1 + (r.zfeIII > bsd.zbio).*obj.DH2S2;
+
                 [zfeIII.a, zfeIII.b, zfeIII.c, zfeIII.d, zfeIII.e, zfeIII.f] = benthic_utils.matchsoln(e3_zfeIII, f3_zfeIII, g3_zfeIII, dedz3_zfeIII, dfdz3_zfeIII, dgdz3_zfeIII, ...
                     e4_zfeIII, f4_zfeIII, g4_zfeIII, dedz4_zfeIII, dfdz4_zfeIII, dgdz4_zfeIII, ...
-                    0, 0);
+                    0, zfeIIIFFe2./D);     % if S-cycle is adjusted at internal boundaries
+%                    0, 0);      % if S-cycle is adjusted for pyrite formation via the SWI-flux of H2S 
                 
                 % Match at zno3, layer 2 - layer 3 (continuity and flux)
                 % basis functions at bottom of layer 2
@@ -196,9 +207,12 @@ classdef benthic_zH2S
                 % Match at zox, layer 1 - layer 2 (continuity, flux discontinuity from H2S source)
                 %flux of H2S to oxic interface (from all sources of H2S below)
                 % NB: include methane region as AOM will produce sulphide as well..
-                % zoxFH2S = 0.0; %r.zTOC_RCM.calcReac(r.zno3, r.zso4, bsd.SO4C, bsd.SO4C, bsd, swi, r) + 0.0; % no secondary redox!
+                % zoxFH2S = 0.0;  % no secondary redox!
                 zoxFH2S = r.zTOC_RCM.calcReac(r.zfeIII, r.zso4, bsd.SO4C, bsd, swi, r) ... % MULTIPLY BY 1/POR ????
-                    + r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
+                    + bsd.gammaCH4.*r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r); % ...    % methanogenesis
+%                    - zfeIIIFFe2;               % - the flux of H2S used for pyrite precip. at zfeIII 
+              %     include if we want to adjust the S-fluxes at the
+              %     boundaries and not at the SWI
                 
                 % Dom 24.02.2016: actually should be 2 integrals for H2S produced: SO4-reduction + AOM (see documentation, but has the same reac const = 0.5) :
                 % basis functions at bottom of layer 1
@@ -215,9 +229,11 @@ classdef benthic_zH2S
                 
                 D = (r.zox <= bsd.zbio).*obj.DH2S1 + (r.zox > bsd.zbio).*obj.DH2S2;
                 
+                % zoxFFe2PP = r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, bsd.FeIIIC*bsd.SD, bsd, swi, r)*(1-bsd.gammaFeS2); 
                 [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
                     e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
-                    0, r.zxf.*bsd.gammaH2S.*(1-bsd.gammaFeS)*zoxFH2S./D);
+                    0, r.zxf.*bsd.gammaH2S.*zoxFH2S./D);
+%                    0, r.zxf.*bsd.gammaH2S.*zoxFH2S./D -zfeIIIFFe2./D);
                 
                 % Dominik 24.02.2016 think it should be -r.zxf.*(1-bsd.gammaH2S).*zoxFH2S./D -> but changes profile significantly!
                 % Dominik 24.02.2016 was r.zxf.*zoxFH2S./D    need gammaH2S here!
