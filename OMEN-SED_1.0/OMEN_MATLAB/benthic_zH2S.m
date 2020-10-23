@@ -17,8 +17,8 @@ classdef benthic_zH2S
             obj.DH2S2=(obj.qdispH2S+obj.adispH2S*swi.T).*bsd.dispFactor;          	% H2S diffusion coefficient in non-bioturbated layer (cm2/yr)
             
             %reactive terms: OM degradation
-            obj.reac1=bsd.SO4C;     % was with pyrite without Fe: (1-bsd.gammaFeS)*bsd.SO4C;
-            obj.reac2=bsd.SO4C;     % was with pyrite without Fe: (1-bsd.gammaFeS)*bsd.SO4C;
+            obj.reac1=bsd.SO4C;    
+            obj.reac2=bsd.SO4C;     
             
         end
         
@@ -174,8 +174,11 @@ classdef benthic_zH2S
                     zso4.a , zso4.b , zso4.c , zso4.d , zso4.e ,zso4.f);
              	%flux of H2S consumed at zFeIII, it reacts with flux of Fe2 from above and is precipitated as pyrite (Sink of H2S)
                 % calculate flux of Fe2+ available for pyrite precipitation
-                zfeIIIFFe2 = (r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, bsd.FeIIIC*bsd.SD, bsd, swi, r) + bsd.gammaCH4.*r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r))*bsd.gammaFeS2; 
-             	% as a test calculate H2S flux from below (should be latger
+                zfeIIIFFe2 = 0.0; % no H2S loss to pyrite
+                % Below WITH SOME PYRITE BUT (somehow 2x is reduced):      
+%                zfeIIIFFe2 = (r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, bsd.FeIIIC*bsd.SD, bsd, swi, r)*bsd.gammaFeS2 + bsd.gammaCH4.*r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r))*bsd.gammaFeS2; 
+
+                % as a test calculate H2S flux from below (should be latger
              	% than what is precipitated as pyrite
                 zoxFH2S_test = r.zTOC_RCM.calcReac(r.zfeIII, r.zso4, bsd.SO4C, bsd, swi, r) ... % MULTIPLY BY 1/POR ????
                     + r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r); % Dominik 25.02.2016

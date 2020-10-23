@@ -289,7 +289,7 @@ classdef benthic_test
             res.zFeIII = benthic_zFeIII(res.bsd, res.swi);                      
             res.zSO4 = benthic_zSO4(res.bsd, res.swi);
             res.zNH4 = benthic_zNH4(res.bsd, res.swi);
-            res.zFe2 = benthic_zFe2(res.bsd, res.swi);
+            res.zFe2 = benthic_zFe2(res.bsd, res.swi, Cox_total);
             res.zH2S = benthic_zH2S(res.bsd, res.swi);
             res.zPO4_M = benthic_zPO4_M(res.bsd, res.swi);
             res.zDIC = benthic_zDIC(res.bsd, res.swi);
