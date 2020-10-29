@@ -152,7 +152,7 @@ classdef benthic_zH2S
                 % ... and top of layer 5
                 [ e5_zso4, dedz5_zso4, f5_zso4, dfdz5_zso4, g5_zso4, dgdz5_zso4] ...
                     = r.zTOC_RCM.calcfg_l12(r.zso4, bsd, swi, r,   0, 0, rH2S.ls5);
-                %flux of H2S produced by AOM interface (Source of H2S)
+                %flux of H2S produced by AOM interface (Source of H2S, therefore '+')
                 %            zso4FH2S = 0.0;  % no secondary redox!
                 zso4FH2S = r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r); % MULTIPLY BY 1/POR ????
                 % match solutions at zso4 - continuous concentration and flux
@@ -174,22 +174,20 @@ classdef benthic_zH2S
                     zso4.a , zso4.b , zso4.c , zso4.d , zso4.e ,zso4.f);
              	%flux of H2S consumed at zFeIII, it reacts with flux of Fe2 from above and is precipitated as pyrite (Sink of H2S)
                 % calculate flux of Fe2+ available for pyrite precipitation
-                zfeIIIFFe2 = 0.0; % no H2S loss to pyrite
-                % Below WITH SOME PYRITE BUT (somehow 2x is reduced):      
-%                zfeIIIFFe2 = (r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, bsd.FeIIIC*bsd.SD, bsd, swi, r)*bsd.gammaFeS2 + bsd.gammaCH4.*r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r))*bsd.gammaFeS2; 
-
-                % as a test calculate H2S flux from below (should be latger
-             	% than what is precipitated as pyrite
-                zoxFH2S_test = r.zTOC_RCM.calcReac(r.zfeIII, r.zso4, bsd.SO4C, bsd, swi, r) ... % MULTIPLY BY 1/POR ????
-                    + r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
+                zfeIIIFFe2 = 0.0; % no H2S loss to pyrite: TODO at SWI when coupled to ESM!
+                % Below WITH PYRITE (sink of H2S, therefore '+') BUT (somehow 2x is reduced):      
+%                zfeIIIFFe2 = (r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, bsd.FeIIIC*bsd.SD, bsd, swi, r) + bsd.gammaCH4.*r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r)); 
+                % as a test calculate H2S flux from below (should be larger than what is precipitated as pyrite
+%                 zoxFH2S_test = r.zTOC_RCM.calcReac(r.zfeIII, r.zso4, bsd.SO4C, bsd, swi, r) ... % MULTIPLY BY 1/POR ????
+%                     + r.zTOC_RCM.calcReac(r.zso4, bsd.zinf, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
 
                 % match solutions at zfeIII - continuous concentration and flux
                 D  = (r.zfeIII <= bsd.zbio).*obj.DH2S1 + (r.zfeIII > bsd.zbio).*obj.DH2S2;
 
                 [zfeIII.a, zfeIII.b, zfeIII.c, zfeIII.d, zfeIII.e, zfeIII.f] = benthic_utils.matchsoln(e3_zfeIII, f3_zfeIII, g3_zfeIII, dedz3_zfeIII, dfdz3_zfeIII, dgdz3_zfeIII, ...
                     e4_zfeIII, f4_zfeIII, g4_zfeIII, dedz4_zfeIII, dfdz4_zfeIII, dgdz4_zfeIII, ...
-                    0, zfeIIIFFe2./D);     % if S-cycle is adjusted at internal boundaries
-%                    0, 0);      % if S-cycle is adjusted for pyrite formation via the SWI-flux of H2S 
+                    0, bsd.gammaFe_pp*zfeIIIFFe2./D);     % if S-cycle is adjusted at internal boundaries at zox and zfe3
+%                    0, 0);      % if S-cycle is adjusted for pyrite formation only at zox
                 
                 % Match at zno3, layer 2 - layer 3 (continuity and flux)
                 % basis functions at bottom of layer 2
@@ -232,11 +230,14 @@ classdef benthic_zH2S
                 
                 D = (r.zox <= bsd.zbio).*obj.DH2S1 + (r.zox > bsd.zbio).*obj.DH2S2;
                 
-                % zoxFFe2PP = r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, bsd.FeIIIC*bsd.SD, bsd, swi, r)*(1-bsd.gammaFeS2); 
+              	% Below WITH PYRITE PRECIP. (sink of H2S, therefore '+'):   
+%                zoxFFe2 = (r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, bsd.FeIIIC*bsd.SD, bsd, swi, r))*(1-bsd.gammaFe_pp);  % with change for pyrite precip.
+                zoxFFe2 = 0.0;      % no change for pyrite precip. - TODO at SWI when coupled to ESM!
                 [zox.a, zox.b, zox.c, zox.d, zox.e, zox.f] = benthic_utils.matchsoln(e1_zox, f1_zox, g1_zox, dedz1_zox, dfdz1_zox, dgdz1_zox, ...
                     e2_zox, f2_zox, g2_zox, dedz2_zox, dfdz2_zox, dgdz2_zox, ...
-                    0, r.zxf.*bsd.gammaH2S.*zoxFH2S./D);
-%                    0, r.zxf.*bsd.gammaH2S.*zoxFH2S./D -zfeIIIFFe2./D);
+                    0, r.zxf.*bsd.gammaH2S.*zoxFH2S./D + zoxFFe2./D);     % with pyrite precip. include if we want to adjust the S-fluxes at the
+              %     boundaries and not at the SWI
+%                    0, r.zxf.*bsd.gammaH2S.*zoxFH2S./D);   % no pyrite prepic
                 
                 % Dominik 24.02.2016 think it should be -r.zxf.*(1-bsd.gammaH2S).*zoxFH2S./D -> but changes profile significantly!
                 % Dominik 24.02.2016 was r.zxf.*zoxFH2S./D    need gammaH2S here!

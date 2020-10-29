@@ -12,8 +12,6 @@ classdef benthic_zFe2
         reac1;
         reac2;
         
-      	gammaFe2_bio;           % fraction of Fe2 that is oxidised in oxic layer (to be calculated with Seb vd Velde's fit to Cox and BW [O2] , that's why it is here)
-        gamma_pp;               % fraction of Fe2 that is buried (i.e. as pyrite and not returned to ocean) / as fraction of reactive Fe3 setteling flux
     end
     
     methods
@@ -24,18 +22,7 @@ classdef benthic_zFe2
             %reactive terms: OM degradation
             obj.reac1=bsd.FeIIIC*bsd.SD;    % the *SD is needed here as Fe2 is dissolved
             obj.reac2=bsd.FeIIIC*bsd.SD;
-            
-            % calculate gamma for fraction of Fe2 re-xidation at zox, using Seb vd Velde's fit
-            a=0.89;
-            b=-3.83; 
-            c=1.45;
-            x = log10(Cox/swi.O20);
-            obj.gammaFe2_bio = 0; %a*exp((x-b)^2/(2*c^2));
-            
-            % calculate gamma for Fe2 burial (mainly as pyrite), using Seb vd Velde's fit
-            d=0.154 * 6;                                % because FFeOOh_t = 6 * FFeOOH_hr
-            BW_O2 = swi.O20 * 1000 *10^6;               % converst from mol/cm3 to mol/kg = mol/L (*1000), then express as mu (*10^6)
-            obj.gamma_pp = (1-d*tanh(Cox/BW_O2));       % 1 - parameterization for DFe-efflux
+
             
         end
         
@@ -149,7 +136,7 @@ classdef benthic_zFe2
             [ e4_zfeIII, dedz4_zfeIII, f4_zfeIII, dfdz4_zfeIII, g4_zfeIII, dgdz4_zfeIII] ...
                 = r.zTOC_RCM.calcfg_l12(r.zfeIII, bsd, swi, r,  0,  0, rFe2.ls4);
             %flux of Fe2 consumed at zFeIII, reacts with flux of H2S from below is precipitated as pyrite (Sink of Fe2)
-            zfeIIIFFe2 = r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, obj.reac1, bsd, swi, r)*obj.gamma_pp; 
+            zfeIIIFFe2 = r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, obj.reac1, bsd, swi, r)*bsd.gammaFe_pp; 
 %            zfeIIIFFe2 = r.swi.Flux_FeIII0*1.0;  % 
             zfeIIIFH2S = r.zTOC_RCM.calcReac(r.zfeIII, bsd.zinf, bsd.SO4C, bsd, swi, r); % assume zso4 = zinf
             %flux of Fe2 produced below zFeIII - oxidation of H2S by FeIII (Source of Fe2)
@@ -181,10 +168,9 @@ classdef benthic_zFe2
             % flux of Fe2 to oxic interface (from all sources of Fe2 below)
             % NB: include methane region as AOM will produce sulphide as well..
 %            zoxFFe2 = 0.0;  % no secondary redox! -- DH - TODO: Check 24.07.20
-            zoxFFe2 = r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, obj.reac1, bsd, swi, r)*(1-obj.gamma_pp);   
+            zoxFFe2 = r.zTOC_RCM.calcReac(r.zno3, r.zfeIII, obj.reac1, bsd, swi, r)*(1-bsd.gammaFe_pp);   
 %                + r.zTOC_RCM.calcReac(r.zfeIII, bsd.zinf, bsd.MC, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
             
-            % Dom 24.02.2016: actually should be 2 integrals for Fe2 produced: SO4-reduction + AOM (see documentation, but has the same reac const = 0.5) :
             % basis functions at bottom of layer 1
             [ e1_zox, dedz1_zox, f1_zox, dfdz1_zox, g1_zox, dgdz1_zox] ...
                 = r.zTOC_RCM.calcfg_l12(r.zox, bsd, swi, r, 0 , 0, rFe2.ls1);

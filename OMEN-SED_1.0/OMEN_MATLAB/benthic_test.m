@@ -5,7 +5,7 @@
 % benthic_test.m
 % functions to run OMEN-SED and plot the results
 
-% Command to run the model: 
+% Command to run the model:
 % benthic_test.run_OMEN: For original 2G model
 % benthic_test.run_OMEN_RCM: For RCM approximation
 % 1) default sediment-water interface boundary conditions are set as prescribed in default_swi()
@@ -40,19 +40,19 @@ classdef benthic_test
             swi.Fnonbio1 =  0.5*6.2e-3/100^2*365;    % swi.C01_nonbio*(1-bsd.por)*bsd.w;    % calculate flux [mol/(cm2 yr)] according non-bioturbated flux
             swi.Fnonbio2 =  0.5*6.2e-3/100^2*365;    % swi.C02_nonbio*(1-bsd.por)*bsd.w;    % calculate flux [mol/(cm2 yr)] according non-bioturbated flux
             swi.C01 = swi.C01_nonbio;                           % resulting bioturbated SWI-concentration, to be calculated in benthic_zTOC.m
-            swi.C02 = swi.C02_nonbio;                           % resulting bioturbated SWI-concentration, to be calculated in benthic_zTOC.m           
+            swi.C02 = swi.C02_nonbio;                           % resulting bioturbated SWI-concentration, to be calculated in benthic_zTOC.m
             
             % for nG-model
             swi.nG = 100;
             swi.p_a =100.1;  % 3e-4;
             swi.p_nu = 0.125;
             swi.C0_nonbio = 6.0 * 1e-2/12*bsd.rho_sed;                 % TOC concentration at SWI (wt%) -> (mol/cm^3 bulk phase)
-
-
-%            swi.FeIII0=2.8E-005; %3.0E-006;                   	% FeIII concentration at SWI (mol/cm^3) --> TODO: needs to be a flux!
+            
+            
+            %            swi.FeIII0=2.8E-005; %3.0E-006;                   	% FeIII concentration at SWI (mol/cm^3) --> TODO: needs to be a flux!
             Fe_influx_Dale = 0.1667*1110.0E-006;                     % FeIII influx from Dale but just 16.67% is available for DIR (See his Tab. 2, footnote d)
             swi.Flux_FeIII0 =  (Fe_influx_Dale)*365/100^2;           % Dale 1110 mol/(m^2 day)   -->  mol/(cm^2 yr):     *365/100^2
-%            swi.FeIII0= swi.Flux_FeIII0/((1-bsd.por)*bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
+            %            swi.FeIII0= swi.Flux_FeIII0/((1-bsd.por)*bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
             
             swi.O20=200.0E-009;                                 % O2  concentration at SWI (mol/cm^3)
             swi.NO30=35.0e-9;                                   % NO3 concentration at SWI (mol/cm^3)
@@ -93,8 +93,8 @@ classdef benthic_test
             Cox_rate.Cox_sulfate = res.zTOC.calcReac(res.zno3, res.bsd.zinf, 1*(1-res.bsd.por), 1*(1-res.bsd.por), res.bsd, res.swi, res)
             
             % Calculate out put to compare with Dale:
-%            Cox_total_Dale_units = Cox_rate.Cox_total*1000 *100^2/365      % in units of mmol m-2 d-1 as in Dale ea. 2015, Fig. 2a
-
+            %            Cox_total_Dale_units = Cox_rate.Cox_total*1000 *100^2/365      % in units of mmol m-2 d-1 as in Dale ea. 2015, Fig. 2a
+            
             % calculate mean OM concentration in upper x cm
             [C_10, C1_10, C2_10] = res.zTOC.calcC( 10, res.bsd, res.swi, res);
             OM_10=C_10* 100*12/res.bsd.rho_sed;
@@ -110,12 +110,14 @@ classdef benthic_test
             
             if(swi.Test_Dale)
                 swi.nG = 14;
-                swi.p_a = 0.1; 
+                swi.p_a = 0.1;
                 swi.p_nu = 0.125;
-              	swi.POC_flux = [0.5 1 2 4 6 8 10 12 14 16];
-              	swi.POCi = 5;                
+                swi.POC_flux = [0.5 1 2 4 6 8 10 12 14 16];
+                swi.POCi = 5;
+                % O20 = [1e-9 2e-9 5e-9 10e-9 15e-9 25e-9 50e-9 100e-9 200e-9];
+                swi.O20=200.0E-009;
             end
-
+            
             res=benthic_test.test_benthic(1,swi);
             % set date-time or string going into plot function
             str_date = [num2str(res.swi.nG) 'G_a=' num2str(res.swi.p_a) '_nu=' num2str(res.swi.p_nu) '_O20_' num2str(res.swi.O20)];
@@ -135,18 +137,18 @@ classdef benthic_test
                 Cox_rate(1,4) = res.zTOC_RCM.calcReac(res.zno3, res.zfeIII,1*(1-res.bsd.por), res.bsd, swi, res)/Cox_rate(1,1)*100;
             end
             Cox_rate(1,5) = res.zTOC_RCM.calcReac(res.zfeIII,res.zso4, 1*(1-res.bsd.por), res.bsd, swi, res)/Cox_rate(1,1)*100;
-
+            
             if(swi.Test_Dale)
                 % compare results with Dale
                 [F_TOC_swi, F_TOC1_swi] = res.zTOC_RCM.calcCflx(0, res.bsd, res.swi, res);
                 [F_TOC_inf, F_TOC1_inf] = res.zTOC_RCM.calcCflx(res.bsd.zinf, res.bsd, res.swi, res);
-
+                
                 Cox_total = (F_TOC_swi-F_TOC_inf)*1000 *100^2/365;      % in units of mmol m-2 d-1 as in Dale ea. 2015, Fig. 2a
                 Flux_Fe2_Dale_units = res.flxswiFe2 *10^6 *100^2 /365;                   % in units of umol m-2 d-1 as in Dale ea. 2015, Fig. 3
                 fprintf('\n');
                 fprintf('Total Cox as flux difference (mmol m-2 d-1) %e \n',  Cox_total);
                 fprintf('SWI-flux FeII (umol m-2 d-1) %e \n',  Flux_Fe2_Dale_units);
-
+                
             end
             
             
@@ -179,64 +181,208 @@ classdef benthic_test
             
             if(swi.Test_Dale)
                 swi.nG = 14;
-                swi.p_a = 0.1; 
+                swi.p_a = 0.1;
                 swi.p_nu = 0.125;
                 
             end
             
             swi.POC_flux = [0.5 1 2 4 6 8 10 12 14 16];
-
+            O20 = [1e-9 2e-9 5e-9 10e-9 15e-9 25e-9 50e-9 100e-9 200e-9];
+            
             for i=1:length(swi.POC_flux)
-                swi.POCi = i;
-                res=benthic_test.test_benthic(1,swi);
-                % set date-time or string going into plot function
+                for j=1:length(O20)
+                fprintf('\n');
+                fprintf('i, j %i %i \n',  i, j);
 
-                swi.C0i = res.swi.C0i;
-                Cox_rate.Cox_aerobic = res.zTOC_RCM.calcReac(0.0, res.zox, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
-                if(swi.Nitrogen)
-                    Cox_rate.Cox_denitr = res.zTOC_RCM.calcReac(res.zox, res.zno3, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
+                    swi.POCi = i;
+                    swi.O20 = O20(j);
+                    res=benthic_test.test_benthic(1,swi);
+                    % set date-time or string going into plot function
+                    
+                    swi.C0i = res.swi.C0i;
+                    Cox_rate_out.Cox_aerobic(i,j) = res.zTOC_RCM.calcReac(0.0, res.zox, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
+                    if(swi.Nitrogen)
+                        Cox_rate_out.Cox_denitr(i,j) = res.zTOC_RCM.calcReac(res.zox, res.zno3, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
+                    end
+                    if(res.swi.Iron)
+                        Cox_rate_out.Cox_FeIII(i,j) = res.zTOC_RCM.calcReac(res.zno3, res.zfeIII,1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
+                    end
+                    Cox_rate_out.Cox_sulfate(i,j) = res.zTOC_RCM.calcReac(res.zfeIII,res.zso4, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
+                    Cox_rate_out.Cox_total(i,j) = res.zTOC_RCM.calcReac(0.0, res.bsd.zinf, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
+                    Cox_rate_out.Total_rate_sum(i,j) = Cox_rate_out.Cox_aerobic(i,j) + Cox_rate_out.Cox_denitr(i,j) + Cox_rate_out.Cox_FeIII(i,j) + Cox_rate_out.Cox_sulfate(i,j);
+                    
+                    Penetration_out.zox(i,j) = res.zox;
+                    Penetration_out.zno3(i,j) = res.zno3;
+                    Penetration_out.zfeIII(i,j) = res.zfeIII;
+                    Penetration_out.zso4(i,j) = res.zso4;
+                    % compare results with Dale
+                    [F_TOC_swi, F_TOC1_swi] = res.zTOC_RCM.calcCflx(0, res.bsd, res.swi, res);
+                    [F_TOC_inf, F_TOC1_inf] = res.zTOC_RCM.calcCflx(res.bsd.zinf, res.bsd, res.swi, res);
+                    
+                    Cox_total_diff = (F_TOC_swi-F_TOC_inf)*1000 *100^2/365;      % in units of mmol m-2 d-1 as in Dale ea. 2015, Fig. 2a
+                    Flux_Fe2_Dale_units(i,j) = res.flxswiFe2 *10^6 *100^2 /365;                   % in units of umol m-2 d-1 as in Dale ea. 2015, Fig. 3
+                    
+                    
+                    
+                    %% old output:
+                    % calculate degradation pathways
+                    %                 Cox_rate_out(1,2*i-1) = Cox_rate.Cox_aerobic;
+                    %                 Cox_rate_out(2,2*i-1) = Cox_rate.Cox_denitr;
+                    %                 Cox_rate_out(3,2*i-1) = Cox_rate.Cox_FeIII;
+                    %                 Cox_rate_out(4,2*i-1) = Cox_rate.Cox_sulfate;
+                    %                 Cox_rate_out(5,2*i-1) = Cox_rate.Cox_total;
+                    %                 % FRaction of total:
+                    %                 Cox_rate_out(1,2*i) = Cox_rate.Cox_aerobic/Cox_rate.Cox_total*100;
+                    %                 Cox_rate_out(2,2*i) = Cox_rate.Cox_denitr/Cox_rate.Cox_total*100;
+                    %                 Cox_rate_out(3,2*i) = Cox_rate.Cox_FeIII/Cox_rate.Cox_total*100;
+                    %                 Cox_rate_out(4,2*i) = Cox_rate.Cox_sulfate/Cox_rate.Cox_total*100;
+                    %                 Cox_rate_out(5,2*i) = Cox_rate.Cox_total/Cox_rate.Cox_total*100;
+                    %
+                    %
+                    %                 Penetration_out(1,2*i-1) = res.zox;
+                    %                 Penetration_out(2,2*i-1) = res.zno3;
+                    %                 Penetration_out(3,2*i-1) = res.zfeIII;
+                    %                 Penetration_out(4,2*i-1) = res.zso4;
+                    %                 Penetration_out(1,2*i) = nan;
+                    %                 Penetration_out(2,2*i) = nan;
+                    %                 Penetration_out(3,2*i) = nan;
+                    %                 Penetration_out(4,2*i) = nan;
                 end
-                if(res.swi.Iron)
-                    Cox_rate.Cox_FeIII = res.zTOC_RCM.calcReac(res.zno3, res.zfeIII,1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
-                end
-                Cox_rate.Cox_sulfate = res.zTOC_RCM.calcReac(res.zfeIII,res.zso4, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
-                Cox_rate.Cox_total = res.zTOC_RCM.calcReac(0.0, res.bsd.zinf, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
-                Cox_rate.Total_rate_sum = Cox_rate.Cox_aerobic + Cox_rate.Cox_denitr + Cox_rate.Cox_FeIII + Cox_rate.Cox_sulfate;
-                % calculate degradation pathways
-                Cox_rate_out(1,2*i-1) = Cox_rate.Cox_aerobic;
-                Cox_rate_out(2,2*i-1) = Cox_rate.Cox_denitr;
-                Cox_rate_out(3,2*i-1) = Cox_rate.Cox_FeIII;
-                Cox_rate_out(4,2*i-1) = Cox_rate.Cox_sulfate;
-                Cox_rate_out(5,2*i-1) = Cox_rate.Cox_total;
-                % FRaction of total:
-                Cox_rate_out(1,2*i) = Cox_rate.Cox_aerobic/Cox_rate.Cox_total*100;
-                Cox_rate_out(2,2*i) = Cox_rate.Cox_denitr/Cox_rate.Cox_total*100;
-                Cox_rate_out(3,2*i) = Cox_rate.Cox_FeIII/Cox_rate.Cox_total*100;
-                Cox_rate_out(4,2*i) = Cox_rate.Cox_sulfate/Cox_rate.Cox_total*100;
-                Cox_rate_out(5,2*i) = Cox_rate.Cox_total/Cox_rate.Cox_total*100;
-
-
-                Penetration_out(1,2*i-1) = res.zox;
-                Penetration_out(2,2*i-1) = res.zno3;
-                Penetration_out(3,2*i-1) = res.zfeIII;
-                Penetration_out(4,2*i-1) = res.zso4;
-                Penetration_out(1,2*i) = nan;
-                Penetration_out(2,2*i) = nan;
-                Penetration_out(3,2*i) = nan;
-                Penetration_out(4,2*i) = nan;
-                % compare results with Dale
-                [F_TOC_swi, F_TOC1_swi] = res.zTOC_RCM.calcCflx(0, res.bsd, res.swi, res);
-                [F_TOC_inf, F_TOC1_inf] = res.zTOC_RCM.calcCflx(res.bsd.zinf, res.bsd, res.swi, res);
-
-                Cox_total_diff = (F_TOC_swi-F_TOC_inf)*1000 *100^2/365;      % in units of mmol m-2 d-1 as in Dale ea. 2015, Fig. 2a
-                Flux_Fe2_Dale_units(2*i-1) = res.flxswiFe2 *10^6 *100^2 /365;                   % in units of umol m-2 d-1 as in Dale ea. 2015, Fig. 3
-                Flux_Fe2_Dale_units(2*i) = nan;                   % in units of umol m-2 d-1 as in Dale ea. 2015, Fig. 3
             end
+            
+            %% plot output
+            benthic_test.plot_Fe_SA(swi.POC_flux, O20, Cox_rate_out, Penetration_out, Flux_Fe2_Dale_units)
+            
+            
         end
         
+        function plot_Fe_SA(POC_flux, O20, Cox_rate_out, Penetration_out, Flux_Fe2_Dale_units)
+            %% plot various results for the Fe analysis
+            
+            str_date = datestr(now,'ddmmyy');
+
+            %%
+            % plot FFe2 vs BW O2
+            fig1 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(POC_flux));
+            hold on
+            for i=1:length(POC_flux)
+                plot(O20, Flux_Fe2_Dale_units(i,:),'x-','Color',color(i,:))
+            end
+            ylabel('JDFe (\mumol m^{-2} d^{-1})');
+            xlabel('[O_2]_{BW} (\muM)');
+            
+            print(fig1, '-depsc2', ['95_Flux_JFFe2_vs_O2_OMEN_gammaN95_' str_date '.eps']);
+            
+            % plot FFe2 vs Cox
+            fig2 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Flux_Fe2_Dale_units(:,j),'x-','Color',color(j,:))
+            end
+            ylabel('JDFe (\mumol m^{-2} d^{-1})');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+            
+            print(fig2, '-depsc2', ['95_Flux_JFFe2_vs_Cox_gammaN95_' str_date '.eps']);
+            
+            %%
+            % plot fraction aerobic-reduction vs Cox
+            % plot FFe2 vs Cox
+            fig3 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_aerobic(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
+            end
+            ylabel('Fract. of aerobic-reduction (%)');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+            ylim([0 80])
+            print(fig3, '-depsc2', ['96_Flux_Frac_aerobic_red_vs_Cox_gammaN95_' str_date '.eps']);
+            
+            % plot fraction aerobic-reduction vs Cox
+            % plot FFe2 vs Cox
+            fig31 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_aerobic(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
+            end
+            ylabel('Fract. of aerobic-reduction (%)');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+            %ylim([0 80])
+            print(fig31, '-depsc2', ['96_Flux_Frac_aerobic_red_vs_Cox_gammaN95_100' str_date '.eps']);
+                        % plot fraction Fe-reduction vs Cox
+            % plot FFe2 vs Cox
+            fig4 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_denitr(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
+            end
+            ylabel('Fract. of denitrification (%)');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+            ylim([0 80])
+            print(fig4, '-depsc2', ['96_Flux_Frac_denitrif_vs_Cox_gammaN95_' str_date '.eps']);
+            
+            % plot fraction Fe-reduction vs Cox
+            % plot FFe2 vs Cox
+            fig5 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_FeIII(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
+            end
+            ylabel('Fract. of Fe-reduction (%)');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+            %            ylim([0 80])
+            print(fig5, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_gammaN95_zoom.eps']);
+            
+            % plot fraction Fe-reduction vs Cox
+            % plot FFe2 vs Cox
+            fig51 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_FeIII(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
+            end
+            ylabel('Fract. of Fe-reduction (%)');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+            ylim([0 80])
+            print(fig51, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_gammaN95_' str_date '.eps']);
+            
+            % plot fraction SO4-reduction vs Cox
+            fig6 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_sulfate(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
+            end
+            ylabel('Fract. of SO_4-reduction (%)');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+            ylim([0 80])
+            print(fig6, '-depsc2', ['96_Flux_Frac_SO4_red_vs_Cox_gammaN95_' str_date '.eps']);
+            
+        end
         
         function res = test_benthic( ncl, swi )
-%            loc_BW_O2_anoxia = 5.0e-9;       	% set to 5.0 nanomol/cm^3
+            %            loc_BW_O2_anoxia = 5.0e-9;       	% set to 5.0 nanomol/cm^3
             if nargin < 1
                 ncl = 1;
             end
@@ -244,7 +390,7 @@ classdef benthic_test
             if(swi.Test_Dale)
                 res.bsd = benthic_main(ncl, 350);   % specify 350m water-depth
             else
-                res.bsd = benthic_main(ncl);                
+                res.bsd = benthic_main(ncl);
             end
             res.bsd.usescalarcode = ncl==1;
             
@@ -268,7 +414,7 @@ classdef benthic_test
             else
                 res.zTOC_RCM = benthic_zTOC_RCM(res.bsd);
             end
-   
+            
             tic;
             if(swi.TwoG_OM_model)
                 res = res.zTOC.calc(res.bsd,res.swi, res);
@@ -286,7 +432,7 @@ classdef benthic_test
             Cox_total = res.zTOC_RCM.calcReac(0.0, res.bsd.zinf, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365; % calculate in mmol/(m2 d) for Seb's parameteriztion
             res.zO2 = benthic_zO2(res.bsd, res.swi);
             res.zNO3 = benthic_zNO3(res.bsd, res.swi);
-            res.zFeIII = benthic_zFeIII(res.bsd, res.swi);                      
+            res.zFeIII = benthic_zFeIII(res.bsd, res.swi);
             res.zSO4 = benthic_zSO4(res.bsd, res.swi);
             res.zNH4 = benthic_zNH4(res.bsd, res.swi);
             res.zFe2 = benthic_zFe2(res.bsd, res.swi, Cox_total);
@@ -294,13 +440,40 @@ classdef benthic_test
             res.zPO4_M = benthic_zPO4_M(res.bsd, res.swi);
             res.zDIC = benthic_zDIC(res.bsd, res.swi);
             res.zALK = benthic_zALK(res.bsd, res.swi);
-         
-% %     change zbio and gammaH2S depending on BW oxygenation:
-% %             if(res.swi.O20<=loc_BW_O2_anoxia)   % anoxic sediments?
-% %                 bsd.zbio = 0.01;        % decrease bioturbation depth
-% %                 bsd.gammaH2S = 0.95;    % fraction of H2S that is oxidised in anoxic sediments
-% %             end
             
+            % set gamma for Fe as fct of Cox and O20:
+            BW_O2 = swi.O20 * 1000 *10^6;               % converst from mol/cm3 to mol/kg = mol/L (*1000), then express as mu (*10^6)
+            % calculate gamma for fraction of Fe2 re-oxidation at zox, using Seb vd Velde's fit
+            a=0.89;
+            b=-3.83;
+            c=1.45;
+            x = log(Cox_total/BW_O2);
+            gammaFe2_max = a*exp(-((x-b)^2)/(2*c^2));
+%            gammaFe2_max = 0.1;
+            % save fractions up to this value in vector in case
+            % Fe-calculation fails and I need to iteratively decrease gammaFe2
+            gammaFe2_v = [0:0.1:gammaFe2_max gammaFe2_max];    
+            gammaFe2_v = fliplr(gammaFe2_v);
+            % calculate gamma for Fe2 burial (mainly as pyrite), using Seb vd Velde's fit
+            d=0.154 * 6;                                % because FFeOOh_t = 6 * FFeOOH_hr
+            res.bsd.gammaFe_pp = (1-d*tanh(Cox_total/BW_O2));       % 1 - parameterization for DFe-efflux
+%            res.bsd.gammaFe_pp = 0.5;
+            
+            
+            % %     change zbio and gammaH2S depending on BW oxygenation:
+            % %             if(res.swi.O20<=loc_BW_O2_anoxia)   % anoxic sediments?
+            % %                 bsd.zbio = 0.01;        % decrease bioturbation depth
+            % %                 bsd.gammaH2S = 0.95;    % fraction of H2S that is oxidised in anoxic sediments
+            % %             end
+            
+            % loop over gammaFe2: 
+            % in case Fe-cycle is not mass-conserving gammaFe2 has to be smaller
+            % this just happens for a few cases when zno3 < zbio << zfe3
+            % (but I am not sure why) - calculation leads to zfe3 < zinf
+            % but not all Fe3flux_in is used
+            for(iter=1:length(gammaFe2_v))           % iteratively chose smaller gammaFe2
+                iter
+                res.bsd.gammaFe2 = gammaFe2_v(iter);
             if(res.swi.O20<=0.0)
                 res.zox=0.0;
                 res.flxzox = 0.0;
@@ -318,6 +491,7 @@ classdef benthic_test
             end
             if(swi.Iron)
                 % First solve iteratively for correct SWI [Fe3+]
+                Flux_FeIII0_in = 2;
                 fun=@(Fe3_conc_in) -res.zFeIII.calc_input(res.bsd, res.swi, res, Fe3_conc_in) - res.swi.Flux_FeIII0;   % NOTE: negative calc_input to transform the result to positive because the given flux at the SWI is positive here!
                 
                 % For starting point calculate SWI-concentration of Fe3+ from input flux
@@ -327,63 +501,104 @@ classdef benthic_test
                     % enough to correct SWI-concentration
                     res.swi.FeIII0= res.swi.Flux_FeIII0/((1-res.bsd.por)*res.bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
                     test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
-                 	% try zero flux at zinf and see if we have any FeIII left, also
+                    % try zero flux at zinf and see if we have any FeIII left, also
                     % calculate [FeIII] at zinf for advective loss
-                    [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2); 
-                    if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried                        
+                    [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2);
+                    if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried
                         fun0 = 0.0;     % use the first guess for res.swi.FeIII0
                         % FOR MASS BALANCE WITH cGENIE MAKE SURE THE
                         % REMAINING INFLUX OF Fe3+ IS BURIED IN SEDIMENTS!!!
                     else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
-                        fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration     
+                        fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
                     end
                 else
                     % SWI-concentration of Fe3+ is affected by Fe-reduction
                     % -> take biodiffusion and Fe-reduction into account
                     res.swi.FeIII0 = res.zFeIII.calcConcentration(res.bsd, res.swi, res, res.swi.Flux_FeIII0);
-                    if(res.swi.FeIII0 < 0)  
-                        % Case zno3 < zFe3 < zbio: calcConcentration() fails
+                    if(res.swi.FeIII0 < 0)
+                        % Either Case zno3 < zFe3 < zbio OR zno3 < zbio << zFe3 (= zinf) and calcConcentration() fails
                         % use simple conversion and iterate from there
                         res.swi.FeIII0= res.swi.Flux_FeIII0/((1-res.bsd.por)*res.bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
-                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
-                        fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration                    
-                    else  
-                 	% try zero flux at zinf and see if we have any FeIII left, also
-                    % calculate [FeIII] at zinf for advective loss
-                    [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2); 
-                    if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried                        
-                        fun0 = 0.0;     % use the first guess for res.swi.FeIII0
-                    else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
-%                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
-                        fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration     
-                    end
+                        [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2);
+                        % check if calculated SWI-flux for calculated concentration and 'infinite' concentration 
+                        % is smaller than desired SWI-flux (i.e. check for res.swi.FeIII0 & 1e+6); 
+                        fun_FeIII00 = fun(1e-10);
+                        fun_FeIII0 = fun(res.swi.FeIII0);
+                        fun_FeIIIinf = fun(1e+6);
+                        % If yes: zfeIII = inf bc SWI-flux of fe3 won't increase anymore if SWI-conc. is increased
+                        % -> use first guess for fe3-flux
+%                        if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried
+                        if((fun_FeIII0 < 0) & (fun_FeIIIinf < 0))    % zbio < zfeIII < zinf --> use first guess for fe3-flux and assume the remainder is buried
+                            fun0 = 0.0;     % use the first guess for res.swi.FeIII0
+                        else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
+                            %                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
+                            fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
+                        end
+%                          fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
+                    else
+                        % try zero flux at zinf and see if we have any FeIII left
+                        [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2);
+                        if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried
+                            fun0 = 0.0;     % use the first guess for res.swi.FeIII0
+                        else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
+                        % check if calculated SWI-flux for calculated concentration and 'infinite' concentration 
+                        % is smaller than desired SWI-flux (i.e. check for res.swi.FeIII0 & 1e+6); 
+                        fun_FeIII00 = fun(1e-10);
+                        fun_FeIII0 = fun(res.swi.FeIII0);
+                        fun_FeIIIinf = fun(1e+6);
+                        % If yes: zfeIII = inf bc SWI-flux of fe3 won't increase anymore if SWI-conc. is increased
+                        % -> use first guess for fe3-flux
+                        if((fun_FeIII0 < 0) & (fun_FeIIIinf < 0))    % zbio < zfeIII < zinf --> no Fe2-reoxidation
+                        fun0 = 0;
+                        else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
+                            %                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
+                            fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
+                        end
+%                            fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
+                        end
                     end
                 end
                 
                 if(abs(fun0) > res.bsd.tol_Fe3)  % initial guess above not good enough
                     
                     if(fun0 > 0)    % Fe3+ concentration too high
-%                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 1e-10);
-%                         test1_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
+                        %                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 1e-10);
+                        %                         test1_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
                         res.swi.FeIII0=fzero(fun,[1e-10, res.swi.FeIII0],res.bsd.fzerooptions_Fe3);    % NOTE: Find better way for lower boundary
                     else    % Fe3+ concentration too low
-%                          test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);                        
-%                          test1_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 0.5*res.swi.FeIII0);
-%                          test2_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 10*res.swi.FeIII0);
-%                          test3_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 1e+6);
+                        %                          test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
+                        %                          test1_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 0.5*res.swi.FeIII0);
+                        %                          test2_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 10*res.swi.FeIII0);
+                        %                          test3_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 1e+6);
                         res.swi.FeIII0=fzero(fun,[res.swi.FeIII0, 1e+6],res.bsd.fzerooptions_Fe3);    % NOTE: Find better way for upper boundary - not sure if this works anyway (at least not for gammaFe2 >= 0.99)
-                    end                    
-                end                    
+                    end
+                end
                 res = res.zFeIII.calc(res.bsd, res.swi, res);
+                % check IF FeIII-flux_in is calculated or IF zfe3 = zinf
+                % otherwise simulate with gammaFe2 = 0   
+                if((abs(-res.flxswiFeIII-res.swi.Flux_FeIII0) < res.bsd.tol_Fe3) || (res.zfeIII == res.bsd.zinf))
+                   % all good
+                   break    % leave for-loop
+%                    res.flxswiFeIII
+%                    res.zfeIII
+                else
+                    warning('SOMETHING WRONG WITH Fe-FLUXES!');
+%                     % no re-oxidation of Fe2 , in second for loop
+%                     res.bsd.gammaFe2 = 0.0;
+%                 	res = res.zFeIII.calc(res.bsd, res.swi, res);
+                end
             else
                 res.zfeIII = res.zno3;
+                break    % leave for-loop
             end
+            end
+            
             res = res.zSO4.calc(res.bsd, res.swi, res);
             if(swi.Nitrogen)
                 res = res.zNH4.calc(res.bsd, res.swi, res);
             end
             if(swi.Iron)
-                                
+                
                 res = res.zFe2.calc(res.bsd, res.swi, res);
             end
             res = res.zH2S.calc(res.bsd, res.swi, res);
@@ -398,12 +613,12 @@ classdef benthic_test
                 % use fluxes to calculate burial efficiency and total Cox:
                 [F_TOC_swi, F_TOC1_swi] = res.zTOC.calcCflx(0, res.bsd, res.swi, res);
                 [F_TOC_inf, F_TOC1_inf] = res.zTOC.calcCflx(res.bsd.zinf, res.bsd, res.swi, res);
-
+                
                 [F_TOC_zox, F_TOC1_zox] = res.zTOC.calcCflx(res.zox, res.bsd, res.swi, res);
                 [F_TOC_zno3, F_TOC1_zno3] = res.zTOC.calcCflx(res.zno3, res.bsd, res.swi, res);
                 [F_TOC_zfe3, F_TOC1_zfe3] = res.zTOC.calcCflx(res.zfeIII, res.bsd, res.swi, res);
                 [F_TOC_zso4, F_TOC1_zso4] = res.zTOC.calcCflx(res.zso4, res.bsd, res.swi, res);
-
+                
                 fprintf('Fluxes at zinf %g \n',  F_TOC_inf);
                 fprintf('Fluxes at swi %g \n',  F_TOC_swi);
                 
@@ -414,7 +629,7 @@ classdef benthic_test
                 fprintf('Denitrification Cox %e \n',  F_TOC_zox - F_TOC_zno3 );
                 fprintf('Fe-reduction Cox %e \n',  F_TOC_zno3 - F_TOC_zfe3);
                 fprintf('Sulfate reduction Cox %e \n',  F_TOC_zfe3-F_TOC_zso4);
-
+                
             else
                 % use fluxes to calculate burial efficiency and total Cox:
                 [F_TOC_swi, F_TOC1_swi] = res.zTOC_RCM.calcCflx(0, res.bsd, res.swi, res);
@@ -424,9 +639,9 @@ classdef benthic_test
                 [F_TOC_zno3, F_TOC1_zno3] = res.zTOC_RCM.calcCflx(res.zno3, res.bsd, res.swi, res);
                 [F_TOC_zfe3, F_TOC1_zfe3] = res.zTOC_RCM.calcCflx(res.zfeIII, res.bsd, res.swi, res);
                 [F_TOC_zso4, F_TOC1_zso4] = res.zTOC_RCM.calcCflx(res.zso4, res.bsd, res.swi, res);
-
+                
                 fprintf('Fluxes at zinf %g \n',  F_TOC_inf);
-                fprintf('Fluxes at swi %g \n',  F_TOC_swi);                                
+                fprintf('Fluxes at swi %g \n',  F_TOC_swi);
                 fprintf('Burial efficiency of POC (in %%) %g \n',  F_TOC_inf/F_TOC_swi *100);
                 fprintf('\n');
                 fprintf('Total Cox (mol cm-2 yr-1) %e \n',  F_TOC_swi-F_TOC_inf);
@@ -459,275 +674,275 @@ classdef benthic_test
             
             % Nitrogen included?
             if(print_Fig1)
-            if(swi.Nitrogen)
-                %figure;
-                fig1 = figure('Renderer', 'painters', 'Position', [10 10 600 900]);
-                % TOC
-                if(swi.TwoG_OM_model)
-                    subplot(3,2,1)
-                    for i=1:length(zgrid)
-                        [C(i), C1(i), C2(i)] = res.zTOC.calcC( zgrid(i), bsd, res.swi, res);
-                        [Cflx(i), C1flx(i), C2flx(i)] = res.zTOC.calcCflx( zgrid(i), bsd, res.swi, res);
+                if(swi.Nitrogen)
+                    %figure;
+                    fig1 = figure('Renderer', 'painters', 'Position', [10 10 600 900]);
+                    % TOC
+                    if(swi.TwoG_OM_model)
+                        subplot(3,2,1)
+                        for i=1:length(zgrid)
+                            [C(i), C1(i), C2(i)] = res.zTOC.calcC( zgrid(i), bsd, res.swi, res);
+                            [Cflx(i), C1flx(i), C2flx(i)] = res.zTOC.calcCflx( zgrid(i), bsd, res.swi, res);
+                        end
+                        
+                        %%% TOC wt %
+                        plot(100*C1*12/bsd.rho_sed, -zgrid, 'b')
+                        hold on
+                        plot(100*C2*12/bsd.rho_sed, -zgrid, 'g')
+                        plot(100*C*12/bsd.rho_sed, -zgrid, 'k')
+                        t=xlim;         % to draw penetration depths the correct lengths
+                        plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
+                        plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
+                        plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                        plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
+                        
+                        %            plot([0,(res.swi.C01+res.swi.C02)*12/bsd.rho_sed ], [-bsd.zbio,-bsd.zbio], 'k--')
+                        hold off
+                        %                ylim([-50 0.0])
+                        xlabel ('TOC (wt%)')
+                        ylabel('Depth (cm)')
+                        %            title('Total TOC (wt%)')
+                    else
+                        subplot(3,2,1)
+                        for i=1:length(zgrid)
+                            [C(i), C1(i,:)] = res.zTOC_RCM.calcC( zgrid(i), bsd, res.swi, res);
+                            [Cflx(i), C1flx(i,:)] = res.zTOC_RCM.calcCflx( zgrid(i), bsd, res.swi, res);
+                        end
+                        %                 color = parula(swi.nG);
+                        %                 for G = 1:swi.nG
+                        %                     plot(100*C1(:,G)*12/bsd.rho_sed, -zgrid,'Color',color(G,:))
+                        %                     hold on
+                        %                 end
+                        % Plot sum (TOC)
+                        plot(100*C*12/bsd.rho_sed, -zgrid, 'b')
+                        hold on
+                        t=xlim;         % to draw penetration depths the correct lengths
+                        plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
+                        plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
+                        plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                        plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
+                        
+                        hold off
+                        xlabel ('TOC (wt%)')
+                        ylabel('Depth (cm)')
+                        %            title('Total TOC (wt%)')
+                        
                     end
                     
-                    %%% TOC wt %
-                    plot(100*C1*12/bsd.rho_sed, -zgrid, 'b')
+                    %%% O2
+                    if(res.zox>0.0)
+                        for i=1:length(zgrid)
+                            [O2(i), flxO2(i), flxO2D(i), flxO2adv(i)] = res.zO2.calcO2(zgrid(i), bsd, res.swi, res);
+                        end
+                    else
+                        O2(i) = 0.0;
+                    end
+                    subplot(3,2,3)
+                    plot(O2, -zgrid, 'b')
                     hold on
-                    plot(100*C2*12/bsd.rho_sed, -zgrid, 'g')
-                    plot(100*C*12/bsd.rho_sed, -zgrid, 'k')
                     t=xlim;         % to draw penetration depths the correct lengths
                     plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
                     plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
                     plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                    plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
                     plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-                    
-                    %            plot([0,(res.swi.C01+res.swi.C02)*12/bsd.rho_sed ], [-bsd.zbio,-bsd.zbio], 'k--')
-                    hold off
-                    %                ylim([-50 0.0])
-                    xlabel ('TOC (wt%)')
+                    %                ylim([-20 0.0])
+                    xlabel ('O_2 (mol/cm^3)')
                     ylabel('Depth (cm)')
-                    %            title('Total TOC (wt%)')
-                else
-                    subplot(3,2,1)
+                    %            title ('O2 (mol/cm^3)')
+                    
+                    %%% NO3
                     for i=1:length(zgrid)
-                        [C(i), C1(i,:)] = res.zTOC_RCM.calcC( zgrid(i), bsd, res.swi, res);
-                        [Cflx(i), C1flx(i,:)] = res.zTOC_RCM.calcCflx( zgrid(i), bsd, res.swi, res);
+                        [NO3(i), flxNO3(i)] = res.zNO3.calcNO3(zgrid(i), bsd, res.swi, res);
                     end
-                    %                 color = parula(swi.nG);
-                    %                 for G = 1:swi.nG
-                    %                     plot(100*C1(:,G)*12/bsd.rho_sed, -zgrid,'Color',color(G,:))
-                    %                     hold on
-                    %                 end
-                    % Plot sum (TOC)
-                    plot(100*C*12/bsd.rho_sed, -zgrid, 'b')
+                    subplot(3,2,5)
+                    plot(NO3, -zgrid, 'b')
                     hold on
                     t=xlim;         % to draw penetration depths the correct lengths
                     plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
                     plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
                     plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                    plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
                     plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-                    
-                    hold off
-                    xlabel ('TOC (wt%)')
+                    %                ylim([-20 0.0])
+                    xlabel ('NO_3 (mol/cm^3)')
                     ylabel('Depth (cm)')
-                    %            title('Total TOC (wt%)')
+                    %            title ('NO3 (mol/cm^3)')
                     
-                end
-                
-                %%% O2
-                if(res.zox>0.0)
+                    %%% NH4
+                    for i=1:length(zgrid)
+                        [NH4(i), flxNH4(i)] = res.zNH4.calcNH4(zgrid(i), bsd, res.swi, res);
+                    end
+                    subplot(3,2,4)
+                    plot(NH4, -zgrid, 'b')
+                    hold on
+                    %                xlim([0 1e-7])
+                    t=xlim;         % to draw penetration depths the correct lengths
+                    plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
+                    plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
+                    plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                    plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
+                    plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
+                    hold off
+                    xlabel ('NH_4 (mol/cm^3)')
+                    %                ylabel('Depth (cm)')
+                    %            title ('NH4 (mol/cm^3)')
+                    
+                    %%% SO4
+                    subplot(3,2,2)
+                    for i=1:length(zgrid)
+                        [SO4(i), flxSO4(i)] = res.zSO4.calcSO4(zgrid(i), bsd, res.swi, res);
+                    end
+                    plot(SO4, -zgrid, 'b')
+                    hold on
+                    %                xlim([2.7e-5 swi.SO40])
+                    %                xlim([2.7e-5 swi.SO40])
+                    t=xlim;         % to draw penetration depths the correct lengths
+                    plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
+                    plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
+                    plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                    plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
+                    plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
+                    hold off
+                    xlabel ('SO_4 (mol/cm^3)')
+                    %                ylabel('Depth (cm)')
+                    %            title ('SO4 (mol/cm^3)')
+                    
+                    %%% H2S
+                    subplot(3,2,6)
+                    for i=1:length(zgrid)
+                        [H2S(i), flxH2S(i)] = res.zH2S.calcH2S(zgrid(i), bsd, res.swi, res);
+                    end
+                    plot(H2S, -zgrid, 'b')
+                    hold on
+                    %                xlim([0 4e-7])
+                    t=xlim;         % to draw penetration depths the correct lengths
+                    plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
+                    plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
+                    plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                    plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
+                    plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
+                    xlabel ('H_2S (mol/cm^3)')
+                    %               ylabel('Depth (cm)')
+                    %            title ('H2S (mol/cm^3)')
+                    
+                    % save Figure
+                    print(fig1, '-depsc2', ['0_ALL_PROFILES_' str_date '.eps']);
+                    
+                else % no Nitrogen
+                    
+                    figure;
+                    % TOC
+                    if(swi.TwoG_OM_model)
+                        subplot(2,2,1)
+                        for i=1:length(zgrid)
+                            [C(i), C1(i), C2(i)] = res.zTOC.calcC( zgrid(i), bsd, res.swi, res);
+                            [Cflx(i), C1flx(i), C2flx(i)] = res.zTOC.calcCflx( zgrid(i), bsd, res.swi, res);
+                        end
+                        %%% TOC wt %
+                        plot(100*C1*12/bsd.rho_sed, -zgrid, 'b')
+                        hold on
+                        plot(100*C2*12/bsd.rho_sed, -zgrid, 'g')
+                        plot(100*C*12/bsd.rho_sed, -zgrid, 'k')
+                        t=xlim;         % to draw penetration depths the correct lengths
+                        plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
+                        plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
+                        plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                        plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
+                        
+                        %            plot([0,(res.swi.C01+res.swi.C02)*12/bsd.rho_sed ], [-bsd.zbio,-bsd.zbio], 'k--')
+                        hold off
+                        xlabel ('TOC (wt%)')
+                        ylabel('Depth (cm)')
+                        %            title('Total TOC (wt%)')
+                    else
+                        subplot(2,2,1)
+                        for i=1:length(zgrid)
+                            [C(i), C1(i,:)] = res.zTOC_RCM.calcC( zgrid(i), bsd, res.swi, res);
+                            [Cflx(i), C1flx(i,:)] = res.zTOC_RCM.calcCflx( zgrid(i), bsd, res.swi, res);
+                        end
+                        color = parula(swi.nG);
+                        for G = 1:swi.nG
+                            plot(100*C1(:,G)*12/bsd.rho_sed, -zgrid,'Color',color(G,:))
+                            hold on
+                        end
+                        % Plot sum (TOC)
+                        plot(100*C*12/bsd.rho_sed, -zgrid, ':k')
+                        hold on
+                        t=xlim;         % to draw penetration depths the correct lengths
+                        plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
+                        plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
+                        plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                        plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
+                        
+                        hold off
+                        xlabel ('TOC (wt%)')
+                        ylabel('Depth (cm)')
+                        %            title('Total TOC (wt%)')
+                        
+                    end
+                    
+                    %%% O2
                     for i=1:length(zgrid)
                         [O2(i), flxO2(i), flxO2D(i), flxO2adv(i)] = res.zO2.calcO2(zgrid(i), bsd, res.swi, res);
                     end
-                else
-                    O2(i) = 0.0;
-                end
-                subplot(3,2,3)
-                plot(O2, -zgrid, 'b')
-                hold on
-                t=xlim;         % to draw penetration depths the correct lengths
-                plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
-                plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
-                plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
-                plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
-                plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-%                ylim([-20 0.0])
-                xlabel ('O_2 (mol/cm^3)')
-                ylabel('Depth (cm)')
-                %            title ('O2 (mol/cm^3)')
-                
-                %%% NO3
-                for i=1:length(zgrid)
-                    [NO3(i), flxNO3(i)] = res.zNO3.calcNO3(zgrid(i), bsd, res.swi, res);
-                end
-                subplot(3,2,5)
-                plot(NO3, -zgrid, 'b')
-                hold on
-                t=xlim;         % to draw penetration depths the correct lengths
-                plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
-                plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
-                plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
-                plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
-                plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-%                ylim([-20 0.0])
-                xlabel ('NO_3 (mol/cm^3)')
-                ylabel('Depth (cm)')
-                %            title ('NO3 (mol/cm^3)')
-                
-                %%% NH4
-                for i=1:length(zgrid)
-                    [NH4(i), flxNH4(i)] = res.zNH4.calcNH4(zgrid(i), bsd, res.swi, res);
-                end
-                subplot(3,2,4)
-                plot(NH4, -zgrid, 'b')
-                hold on
-%                xlim([0 1e-7])
-                t=xlim;         % to draw penetration depths the correct lengths
-                plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
-                plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
-                plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
-                plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
-                plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-                hold off
-                xlabel ('NH_4 (mol/cm^3)')
-                %                ylabel('Depth (cm)')
-                %            title ('NH4 (mol/cm^3)')
-                
-                %%% SO4
-                subplot(3,2,2)
-                for i=1:length(zgrid)
-                    [SO4(i), flxSO4(i)] = res.zSO4.calcSO4(zgrid(i), bsd, res.swi, res);
-                end
-                plot(SO4, -zgrid, 'b')
-                hold on
-                %                xlim([2.7e-5 swi.SO40])
-                %                xlim([2.7e-5 swi.SO40])
-                t=xlim;         % to draw penetration depths the correct lengths
-                plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
-                plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
-                plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
-                plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
-                plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-                hold off
-                xlabel ('SO_4 (mol/cm^3)')
-                %                ylabel('Depth (cm)')
-                %            title ('SO4 (mol/cm^3)')
-                
-                %%% H2S
-                subplot(3,2,6)
-                for i=1:length(zgrid)
-                    [H2S(i), flxH2S(i)] = res.zH2S.calcH2S(zgrid(i), bsd, res.swi, res);
-                end
-                plot(H2S, -zgrid, 'b')
-                hold on
-                %                xlim([0 4e-7])
-                t=xlim;         % to draw penetration depths the correct lengths
-                plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
-                plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
-                plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
-                plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
-                plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-                xlabel ('H_2S (mol/cm^3)')
-                %               ylabel('Depth (cm)')
-                %            title ('H2S (mol/cm^3)')
-                
-                % save Figure
-                print(fig1, '-depsc2', ['0_ALL_PROFILES_' str_date '.eps']);
-                
-            else % no Nitrogen
-                
-                figure;
-                % TOC
-                if(swi.TwoG_OM_model)
-                    subplot(2,2,1)
-                    for i=1:length(zgrid)
-                        [C(i), C1(i), C2(i)] = res.zTOC.calcC( zgrid(i), bsd, res.swi, res);
-                        [Cflx(i), C1flx(i), C2flx(i)] = res.zTOC.calcCflx( zgrid(i), bsd, res.swi, res);
-                    end
-                    %%% TOC wt %
-                    plot(100*C1*12/bsd.rho_sed, -zgrid, 'b')
-                    hold on
-                    plot(100*C2*12/bsd.rho_sed, -zgrid, 'g')
-                    plot(100*C*12/bsd.rho_sed, -zgrid, 'k')
-                    t=xlim;         % to draw penetration depths the correct lengths
-                    plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
-                    plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
-                    plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
-                    plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-                    
-                    %            plot([0,(res.swi.C01+res.swi.C02)*12/bsd.rho_sed ], [-bsd.zbio,-bsd.zbio], 'k--')
-                    hold off
-                    xlabel ('TOC (wt%)')
-                    ylabel('Depth (cm)')
-                    %            title('Total TOC (wt%)')
-                else
-                    subplot(2,2,1)
-                    for i=1:length(zgrid)
-                        [C(i), C1(i,:)] = res.zTOC_RCM.calcC( zgrid(i), bsd, res.swi, res);
-                        [Cflx(i), C1flx(i,:)] = res.zTOC_RCM.calcCflx( zgrid(i), bsd, res.swi, res);
-                    end
-                    color = parula(swi.nG);
-                    for G = 1:swi.nG
-                        plot(100*C1(:,G)*12/bsd.rho_sed, -zgrid,'Color',color(G,:))
-                        hold on
-                    end
-                    % Plot sum (TOC)
-                    plot(100*C*12/bsd.rho_sed, -zgrid, ':k')
+                    subplot(2,2,3)
+                    plot(O2, -zgrid, 'b')
                     hold on
                     t=xlim;         % to draw penetration depths the correct lengths
                     plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
                     plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
                     plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
                     plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-                    
-                    hold off
-                    xlabel ('TOC (wt%)')
+                    xlabel ('O_2 (mol/cm^3)')
                     ylabel('Depth (cm)')
-                    %            title('Total TOC (wt%)')
+                    %            title ('O2 (mol/cm^3)')
                     
+                    %%% SO4
+                    subplot(2,2,2)
+                    for i=1:length(zgrid)
+                        [SO4(i), flxSO4(i)] = res.zSO4.calcSO4(zgrid(i), bsd, res.swi, res);
+                    end
+                    plot(SO4, -zgrid, 'b')
+                    hold on
+                    t=xlim;         % to draw penetration depths the correct lengths
+                    plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
+                    plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
+                    plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                    plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
+                    hold off
+                    %            xlim([2.7e-5 swi.SO40])
+                    xlabel ('SO_4 (mol/cm^3)')
+                    ylabel('Depth (cm)')
+                    %            title ('SO4 (mol/cm^3)')
+                    
+                    %%% H2S
+                    subplot(2,2,4)
+                    for i=1:length(zgrid)
+                        [H2S(i), flxH2S(i)] = res.zH2S.calcH2S(zgrid(i), bsd, res.swi, res);
+                    end
+                    plot(H2S, -zgrid, 'b')
+                    hold on
+                    t=xlim;         % to draw penetration depths the correct lengths
+                    plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
+                    plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
+                    plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
+                    plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
+                    xlabel ('H_2S (mol/cm^3)')
+                    ylabel('Depth (cm)')
+                    %            title ('H2S (mol/cm^3)')
+                    
+                    
+                    print('-dpsc2', ['0_PROFILES_' str_date '.eps']);
                 end
-                
-                %%% O2
-                for i=1:length(zgrid)
-                    [O2(i), flxO2(i), flxO2D(i), flxO2adv(i)] = res.zO2.calcO2(zgrid(i), bsd, res.swi, res);
-                end
-                subplot(2,2,3)
-                plot(O2, -zgrid, 'b')
-                hold on
-                t=xlim;         % to draw penetration depths the correct lengths
-                plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
-                plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
-                plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
-                plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-                xlabel ('O_2 (mol/cm^3)')
-                ylabel('Depth (cm)')
-                %            title ('O2 (mol/cm^3)')
-                
-                %%% SO4
-                subplot(2,2,2)
-                for i=1:length(zgrid)
-                    [SO4(i), flxSO4(i)] = res.zSO4.calcSO4(zgrid(i), bsd, res.swi, res);
-                end
-                plot(SO4, -zgrid, 'b')
-                hold on
-                t=xlim;         % to draw penetration depths the correct lengths
-                plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
-                plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
-                plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
-                plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-                hold off
-                %            xlim([2.7e-5 swi.SO40])
-                xlabel ('SO_4 (mol/cm^3)')
-                ylabel('Depth (cm)')
-                %            title ('SO4 (mol/cm^3)')
-                
-                %%% H2S
-                subplot(2,2,4)
-                for i=1:length(zgrid)
-                    [H2S(i), flxH2S(i)] = res.zH2S.calcH2S(zgrid(i), bsd, res.swi, res);
-                end
-                plot(H2S, -zgrid, 'b')
-                hold on
-                t=xlim;         % to draw penetration depths the correct lengths
-                plot([0,t(1,2)], [-bsd.zbio,-bsd.zbio], 'k--')
-                plot([0,t(1,2)], [-res.zox,-res.zox], 'b--')
-                plot([0,t(1,2)], [-res.zno3,-res.zno3], 'g--')
-                plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
-                xlabel ('H_2S (mol/cm^3)')
-                ylabel('Depth (cm)')
-                %            title ('H2S (mol/cm^3)')
-                
-                
-                print('-dpsc2', ['0_PROFILES_' str_date '.eps']);
             end
-     	end
             
             % Also plot the 2nd figure for PO4, DIC and ALK?
             if(swi.plot_PO4_DIC_ALK)
                 % figure
-            	fig2 = figure('Renderer', 'painters', 'Position', [10 10 600 900]);
-
-                 %%% FeIII
+                fig2 = figure('Renderer', 'painters', 'Position', [10 10 600 900]);
+                
+                %%% FeIII
                 subplot(3,2,1)
                 for i=1:length(zgrid)
                     [FeIII(i), flxFeIII(i)] = res.zFeIII.calcFeIII(zgrid(i), bsd, res.swi, res);
@@ -743,12 +958,12 @@ classdef benthic_test
                 plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
                 plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
                 hold off
-%                ylim_min = -round(res.zfeIII,-1)-10;
-%                ylim([ylim_min 0.0])
+                %                ylim_min = -round(res.zfeIII,-1)-10;
+                %                ylim([ylim_min 0.0])
                 xlabel ('FeIII (mol/cm^3)')
                 ylabel('Depth (cm)')
                 %            title ('SO4 (mol/cm^3)')
-
+                
                 %%% Fe2
                 subplot(3,2,2)
                 for i=1:length(zgrid)
@@ -763,7 +978,7 @@ classdef benthic_test
                 plot([0,t(1,2)], [-res.zfeIII,-res.zfeIII], 'm--')
                 plot([0,t(1,2)], [-res.zso4,-res.zso4], 'r--')
                 xlabel ('Fe2 (mol/cm^3)')
-%                ylabel('Depth (cm)')
+                %                ylabel('Depth (cm)')
                 %            title ('Fe2 (mol/cm^3)')
                 
                 
@@ -1211,26 +1426,26 @@ classdef benthic_test
                 %            title ('O2 (mol/cm^3)')
                 
             end
-        end       
-                
+        end
+        
         function [k, C0i, Fnonbioi] = RCM(bsd, swi)
             %% Implemented by Philip Pika
             %% Described in Pika et al. (2020) GMD
             
             % For comparison with original 2G results
             if swi.nG == 2          % nothing needs to be done here - all set in default_swi()
-%                 F(1) = 0.5;
-%                 F(2) = 0.5;
-%                 C0i = F.*swi.C0_nonbio * 1e-2/12*bsd.rho_sed;       % TOC@SWI (wt%) -> (mol/cm^3 bulk phase), 2.5 sed.density (g/cm3) 0.1
-%                 Fnonbioi = swi.C0_nonbio*(1-bsd.por)*bsd.w;        % [mol/(cm2 yr)] according non-bioturbated flux
-%                 k = [0.01 0.0001];
-%                 swi.p_a = NaN;
-%                 swi.p_nu = NaN;
+                %                 F(1) = 0.5;
+                %                 F(2) = 0.5;
+                %                 C0i = F.*swi.C0_nonbio * 1e-2/12*bsd.rho_sed;       % TOC@SWI (wt%) -> (mol/cm^3 bulk phase), 2.5 sed.density (g/cm3) 0.1
+                %                 Fnonbioi = swi.C0_nonbio*(1-bsd.por)*bsd.w;        % [mol/(cm2 yr)] according non-bioturbated flux
+                %                 k = [0.01 0.0001];
+                %                 swi.p_a = NaN;
+                %                 swi.p_nu = NaN;
             else
                 emin = -15; % as in Dale ea. '15: -10;
                 emax = -log10(swi.p_a)+2;  % as in Dale ea. '15: 2    % upper k limit for k-bins of multi-G approximation
                 if emin >= emax;error('emin >= emax, this cannot be!');end
-%                 if emax >= log10(200);emax=log10(200);end
+                %                 if emax >= log10(200);emax=log10(200);end
                 
                 k(1)= 10^(emin);
                 kk(1)=10^(emin);
@@ -1255,52 +1470,52 @@ classdef benthic_test
             end
         end
         
-      	function [k, C0i, Fnonbioi] = RCM_Dale_2015(bsd, swi)
+        function [k, C0i, Fnonbioi] = RCM_Dale_2015(bsd, swi)
             %% specify k and F speficically as in Dale ea. 2015 and use input flux to calculate non-bioturbated SWI-concentration of POC
             
-
-                k(1)= 1e-10;
-                for i=2:13
-                    j = -12+i;
-                    k(i)= 3.16*10^j;
-                end
-                k(14)= 100;
-%                k(1:10) = 0.08;    % in case we want to degrade all
-                
-                F(1) = 0.021746;
-                F(2) = 0.00725275;
-                F(3) = 0.0096717;
-                F(4) = 0.0128974;
-                F(5) = 0.017199;
-                F(6) = 0.0229352;
-                F(7) = 0.0305846;
-                F(8) = 0.0407852;
-                F(9) = 0.0543879;
-                F(10) = 0.0725265;
-                F(11) = 0.0967046;
-                F(12) = 0.12881;
-                F(13) = 0.169822;
-                F(14) = 0.314677;
-                
-                if abs(sum(F)-1) > 0.0001;warning('F~=1!!');end
-                
-                % use the input flux of 6.2 mmol m-2 d-1 from Dale
-                % BC Dale ea 2015: 
-%                POC_flux = [0.5 1 2 4 6 8 10 12 14 16];
-
-                FPOC_Dale = swi.POC_flux(swi.POCi)*10^(-3)/100^2*365;   %   in mol / (cm^2*yr)
-%                FPOC_Dale = 6.0*10^(-3)/100^2*365;   %   in mol / (cm^2*yr)
-                Fnonbioi = F.* FPOC_Dale; % NonBioturbated SWI              
-                C0i = Fnonbioi/((1-bsd.por)*bsd.w); % this value is not used anywhere - C0i is calculated from SWI-flux in benthic_zTOC_RCM.m
-%                Fnonbioi = F.* ( swi.C0_nonbio*(1-bsd.por)*bsd.w ); % NonBioturbated SWI
-%                C0i = F.*swi.C0_nonbio;
-
+            
+            k(1)= 1e-10;
+            for i=2:13
+                j = -12+i;
+                k(i)= 3.16*10^j;
+            end
+            k(14)= 100;
+            %                k(1:10) = 0.08;    % in case we want to degrade all
+            
+            F(1) = 0.021746;
+            F(2) = 0.00725275;
+            F(3) = 0.0096717;
+            F(4) = 0.0128974;
+            F(5) = 0.017199;
+            F(6) = 0.0229352;
+            F(7) = 0.0305846;
+            F(8) = 0.0407852;
+            F(9) = 0.0543879;
+            F(10) = 0.0725265;
+            F(11) = 0.0967046;
+            F(12) = 0.12881;
+            F(13) = 0.169822;
+            F(14) = 0.314677;
+            
+            if abs(sum(F)-1) > 0.0001;warning('F~=1!!');end
+            
+            % use the input flux of 6.2 mmol m-2 d-1 from Dale
+            % BC Dale ea 2015:
+            %                POC_flux = [0.5 1 2 4 6 8 10 12 14 16];
+            
+            FPOC_Dale = swi.POC_flux(swi.POCi)*10^(-3)/100^2*365;   %   in mol / (cm^2*yr)
+            %                FPOC_Dale = 6.0*10^(-3)/100^2*365;   %   in mol / (cm^2*yr)
+            Fnonbioi = F.* FPOC_Dale; % NonBioturbated SWI
+            C0i = Fnonbioi/((1-bsd.por)*bsd.w); % this value is not used anywhere - C0i is calculated from SWI-flux in benthic_zTOC_RCM.m
+            %                Fnonbioi = F.* ( swi.C0_nonbio*(1-bsd.por)*bsd.w ); % NonBioturbated SWI
+            %                C0i = F.*swi.C0_nonbio;
+            
         end
         
-      	function run_PO4flux_SA_OMEN()
+        function run_PO4flux_SA_OMEN()
             % make PO4-SWI flux SA for changing boundary conditions in Corg and O2
             clear
-
+            
             swi=benthic_test.default_swi()
             %            % set date-time
             %            str_date = datestr(now,'ddmmyy_HH_MM_SS');
@@ -1308,16 +1523,16 @@ classdef benthic_test
                 swi.C01 = (0.1+(i-1)*0.2)*1e-2/12*2.5;     % 2.5 is rho_sed                      % resulting bioturbated SWI-concentration, to be calculated in benthic_zTOC.m
                 swi.C02 = swi.C01;
                 Corg(i)=2*(0.1+(i-1)*0.2);
-                for j=1:21  % 51              
-                    swi.O20=(j-1)*3.0E-009;                                 % O2  concentration at SWI (mol/cm^3)                    
+                for j=1:21  % 51
+                    swi.O20=(j-1)*3.0E-009;                                 % O2  concentration at SWI (mol/cm^3)
                     res=benthic_test.test_benthic(1,swi);
                     SWI_PO4(i,j)=res.flxswi_P;
                     O20(j)=(j-1)*3.0E-009;
-%                  if((i==2 && j==2) || (i==3 && j==4))2.78E-005
-
-%                      benthic_test.plot_column(res, false, swi, '00_expl_profiles')
-%                  end
-                end                
+                    %                  if((i==2 && j==2) || (i==3 && j==4))2.78E-005
+                    
+                    %                      benthic_test.plot_column(res, false, swi, '00_expl_profiles')
+                    %                  end
+                end
             end
             
             figure;
@@ -1327,13 +1542,13 @@ classdef benthic_test
             colorbar();
             box on
             hold off
-            xlabel('Ocean O_2')    
+            xlabel('Ocean O_2')
             ylabel ({'Corg'}); %;'(\mumol cm^{-2}yr^{-1})'})
             print('-depsc', '0_PO4_SWI-flux_SA_1811_NoAnoxicChange_FullP-cycle_higherPO4a_FasterDegrad_1000m');
-%            print('-depsc', 'PO4_SWI-flux_SA_0907_4PO4_006500001_15Corg_150O2_3000m_ksfast');
-        
+            %            print('-depsc', 'PO4_SWI-flux_SA_0907_4PO4_006500001_15Corg_150O2_3000m_ksfast');
+            
         end
-
+        
         
     end
     

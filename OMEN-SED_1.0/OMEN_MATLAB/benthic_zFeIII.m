@@ -117,8 +117,12 @@ classdef benthic_zFeIII
                 % Match at zox, layer 1 - layer 2 (continuity, flux discontinuity from H2S source)
                 % flux of Fe2 to oxic interface (Source of FeIII)
                 %            FH2S = 0.0; %r.zTOC.calcReac(r.zno3, zfeIII, bsd.FeIIIC, bsd.FeIIIC, bsd, swi, r) + 0.0; % no secondary redox!
-                FFe2 = r.zTOC.calcReac(r.zno3, zfeIII, bsd.FeIIIC, bsd.FeIIIC, bsd, swi, r);
-                %                + bsd.gammaCH4.*r.zTOC.calcReac(zfeIII, bsd.zinf, bsd.MC, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
+                FFe2 = r.zTOC.calcReac(r.zno3, zfeIII, bsd.FeIIIC, bsd.FeIIIC, bsd, swi, r);% *(1-bsd.gammaFe_pp);  
+                % I actually think pp should be included here [i.e. *(1-bsd.gammaFe_pp)], but then Fe2-flux is too small, 
+                % so I just assume PP is much slower than Fe2-oxidation (which is true) and PP happens as the last reaction.
+                % As a result Fe-reduction rates are probably overestimated for either high gamma_pp and/or high gamma_Fe2
+                % because too much Fe2 is re-oxidized
+
                 % basis functions at bottom of layer 1
                 [ e1_zox, dedz1_zox, f1_zox, dfdz1_zox, g1_zox, dgdz1_zox] ...
                     = r.zTOC.calcfg_l12(r.zox, bsd, swi, r, 0 , 0 , 0, rFeIII.ls1);
@@ -180,8 +184,12 @@ classdef benthic_zFeIII
                 % Match at zox, layer 1 - layer 2 (continuity, flux discontinuity from H2S source)
                 % flux of Fe2 to oxic interface (Source of FeIII)
                 %            FH2S = 0.0; %r.zTOC_RCM.calcReac(r.zno3, zfeIII, bsd.FeIIIC, bsd.FeIIIC, bsd, swi, r) + 0.0; % no secondary redox!
-                FFe2 = r.zTOC_RCM.calcReac(r.zno3, zfeIII, bsd.FeIIIC, bsd, swi, r);
-                %                + bsd.gammaCH4.*r.zTOC_RCM.calcReac(zfeIII, bsd.zinf, bsd.MC, bsd.MC, bsd, swi, r); % Dominik 25.02.2016
+                FFe2 = r.zTOC_RCM.calcReac(r.zno3, zfeIII, bsd.FeIIIC, bsd, swi, r); % *(1-bsd.gammaFe_pp);  
+                % I actually think pp should be included here [i.e. *(1-bsd.gammaFe_pp)], but then Fe2-flux is too small, 
+                % so I just assume PP is much slower than Fe2-oxidation (which is true) and PP happens as the last reaction.
+                % As a result Fe-reduction rates are probably overestimated for either high gamma_pp and/or high gamma_Fe2
+                % because too much Fe2 is re-oxidized
+                
                 % basis functions at bottom of layer 1
                 [ e1_zox, dedz1_zox, f1_zox, dfdz1_zox, g1_zox, dgdz1_zox] ...
                     = r.zTOC_RCM.calcfg_l12(r.zox, bsd, swi, r, 0, 0, rFeIII.ls1);
