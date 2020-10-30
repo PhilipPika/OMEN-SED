@@ -348,7 +348,7 @@ classdef benthic_test
             ylabel('Fract. of Fe-reduction (%)');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
             %            ylim([0 80])
-            print(fig5, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_gammaN95_zoom.eps']);
+            print(fig5, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_gammaN95_' str_date '_zoom.eps']);
             
             % plot fraction Fe-reduction vs Cox
             % plot FFe2 vs Cox

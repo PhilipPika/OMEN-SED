@@ -40,6 +40,7 @@ classdef benthic_main < handle
         PC2;                                    % P/C second TOC fraction (mol/mol)
         FeIIIC;                                 % FeIII/C (mol/mol)
         SO4C;                                   % SO4/C (mol/mol)
+        O2Fe2;                                  % O2/Fe2 ratio for oxidation of Fe2 (mol/mol)
         O2H2S;                                  % O2/H2S ratio for oxidation of H2S (mol/mol)
         FeIIIH2S;                            	% Mol of FeIII to oxidize 1 mol H2S
         DICC1;                                  % DIC/C until zSO4 (mol/mol)
@@ -115,8 +116,9 @@ classdef benthic_main < handle
             obj.PC2=1/106*obj.SD;               % P/C second TOC fraction 1/106 (mol/mol)
             obj.FeIIIC=4.0;                     % FeIII/C (mol/mol)
             obj.SO4C=(138.0/212.0)*obj.SD;      % SO4/C (mol/mol) (was 0.5*obj.SD;)
+            obj.O2Fe2=1.0/4.0;                  % Mol of O2 to oxidize 1 mol Fe2
             obj.O2H2S=2.0;                      % Mol of O2 to oxidize 1 mol H2S
-            obj.FeIIIH2S=8.0/obj.SD;                   % Mol of FeIII to oxidize 1 mol H2S
+            obj.FeIIIH2S=8.0/obj.SD;            % Mol of FeIII to oxidize 1 mol H2S
             obj.DICC1=1.0*obj.SD;             	% DIC/C until zSO4 (mol/mol)
             obj.DICC2=0.5*obj.SD;             	% DIC/C below zSO4 (mol/mol)
             obj.MC=0.5*obj.SD;                	% CH4/C (mol/mol)
