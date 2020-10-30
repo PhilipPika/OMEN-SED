@@ -30,6 +30,7 @@ classdef benthic_test
             swi.T = 8.0;                                        % temperature (degree C)
             
             swi.Test_Dale = true;
+            swi.Test_Dale_14G = true;               % use for 14G model as in Dale or nG as specified below
             swi.plot_fig = false;                                % plot the sediment profiles
             
             swi.Nitrogen=true;                                  % calculate N (true/false)
@@ -109,13 +110,15 @@ classdef benthic_test
             swi.TwoG_OM_model = false;
             
             if(swi.Test_Dale)
-                swi.nG = 14;
+                if(swi.Test_Dale_14G)
+                    swi.nG = 14;
+                end
                 swi.p_a = 0.1;
                 swi.p_nu = 0.125;
                 swi.POC_flux = [0.5 1 2 4 6 8 10 12 14 16];
-                swi.POCi = 5;
-                % O20 = [1e-9 2e-9 5e-9 10e-9 15e-9 25e-9 50e-9 100e-9 200e-9];
-                swi.O20=200.0E-009;
+                swi.POCi = 1;
+                O20_v = [1e-9 2e-9 5e-9 10e-9 15e-9 25e-9 50e-9 100e-9 200e-9];
+                swi.O20=O20_v(3);
             end
             
             res=benthic_test.test_benthic(1,swi);
@@ -180,7 +183,9 @@ classdef benthic_test
             swi.TwoG_OM_model = false;
             
             if(swi.Test_Dale)
-                swi.nG = 14;
+                if(swi.Test_Dale_14G)
+                    swi.nG = 14;
+                end
                 swi.p_a = 0.1;
                 swi.p_nu = 0.125;
                 
@@ -190,6 +195,7 @@ classdef benthic_test
             O20 = [1e-9 2e-9 5e-9 10e-9 15e-9 25e-9 50e-9 100e-9 200e-9];
             
             for i=1:length(swi.POC_flux)
+                i
                 for j=1:length(O20)
                 fprintf('\n');
                 fprintf('i, j %i %i \n',  i, j);
@@ -251,17 +257,20 @@ classdef benthic_test
             end
             
             %% plot output
-            benthic_test.plot_Fe_SA(swi.POC_flux, O20, Cox_rate_out, Penetration_out, Flux_Fe2_Dale_units)
+            benthic_test.plot_Fe_SA(swi.POC_flux, O20, Cox_rate_out, Penetration_out, Flux_Fe2_Dale_units, swi.nG)
             
             
         end
         
-        function plot_Fe_SA(POC_flux, O20, Cox_rate_out, Penetration_out, Flux_Fe2_Dale_units)
+        function plot_Fe_SA(POC_flux, O20, Cox_rate_out, Penetration_out, Flux_Fe2_Dale_units, nG)
             %% plot various results for the Fe analysis
             
             str_date = datestr(now,'ddmmyy');
 
-            %%
+            %% plor FFe efflux
+            x_axis = [0 14];
+            y_axis = [0 200];
+            
             % plot FFe2 vs BW O2
             fig1 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
             set(0,'defaultLineLineWidth', 2)
@@ -271,10 +280,11 @@ classdef benthic_test
             for i=1:length(POC_flux)
                 plot(O20, Flux_Fe2_Dale_units(i,:),'x-','Color',color(i,:))
             end
+%            ylim(y_axis)
             ylabel('JDFe (\mumol m^{-2} d^{-1})');
             xlabel('[O_2]_{BW} (\muM)');
             
-            print(fig1, '-depsc2', ['95_Flux_JFFe2_vs_O2_OMEN_gammaN95_' str_date '.eps']);
+            print(fig1, '-depsc2', ['95_Flux_JFFe2_vs_O2_OMEN_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
             
             % plot FFe2 vs Cox
             fig2 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
@@ -285,12 +295,15 @@ classdef benthic_test
             for j=1:length(O20)
                 plot(Cox_rate_out.Cox_total(:,j), Flux_Fe2_Dale_units(:,j),'x-','Color',color(j,:))
             end
+            xlim(x_axis)
+%            ylim(y_axis)
             ylabel('JDFe (\mumol m^{-2} d^{-1})');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
             
-            print(fig2, '-depsc2', ['95_Flux_JFFe2_vs_Cox_gammaN95_' str_date '.eps']);
+            print(fig2, '-depsc2', ['95_Flux_JFFe2_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
             
-            %%
+            %% Plot fraction of metabolic pathways
+            y_axis = [0 100];
             % plot fraction aerobic-reduction vs Cox
             % plot FFe2 vs Cox
             fig3 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
@@ -303,24 +316,10 @@ classdef benthic_test
             end
             ylabel('Fract. of aerobic-reduction (%)');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
-            ylim([0 80])
-            print(fig3, '-depsc2', ['96_Flux_Frac_aerobic_red_vs_Cox_gammaN95_' str_date '.eps']);
+            ylim(y_axis)
+            print(fig3, '-depsc2', ['96_Flux_Frac_aerobic_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
             
-            % plot fraction aerobic-reduction vs Cox
-            % plot FFe2 vs Cox
-            fig31 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
-            set(0,'defaultLineLineWidth', 2)
-            set(0,'DefaultAxesFontSize',12)
-            color = parula(length(O20));
-            hold on
-            for j=1:length(O20)
-                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_aerobic(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
-            end
-            ylabel('Fract. of aerobic-reduction (%)');
-            xlabel('[Cox] (mmol m^{-2} d^{-1})');
-            %ylim([0 80])
-            print(fig31, '-depsc2', ['96_Flux_Frac_aerobic_red_vs_Cox_gammaN95_100' str_date '.eps']);
-                        % plot fraction Fe-reduction vs Cox
+            % plot fraction Fe-reduction vs Cox
             % plot FFe2 vs Cox
             fig4 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
             set(0,'defaultLineLineWidth', 2)
@@ -332,11 +331,10 @@ classdef benthic_test
             end
             ylabel('Fract. of denitrification (%)');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
-            ylim([0 80])
-            print(fig4, '-depsc2', ['96_Flux_Frac_denitrif_vs_Cox_gammaN95_' str_date '.eps']);
+            ylim(y_axis)
+            print(fig4, '-depsc2', ['96_Flux_Frac_denitrif_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
             
             % plot fraction Fe-reduction vs Cox
-            % plot FFe2 vs Cox
             fig5 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
             set(0,'defaultLineLineWidth', 2)
             set(0,'DefaultAxesFontSize',12)
@@ -348,7 +346,7 @@ classdef benthic_test
             ylabel('Fract. of Fe-reduction (%)');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
             %            ylim([0 80])
-            print(fig5, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_gammaN95_' str_date '_zoom.eps']);
+            print(fig5, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction_zoom.eps']);
             
             % plot fraction Fe-reduction vs Cox
             % plot FFe2 vs Cox
@@ -362,8 +360,8 @@ classdef benthic_test
             end
             ylabel('Fract. of Fe-reduction (%)');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
-            ylim([0 80])
-            print(fig51, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_gammaN95_' str_date '.eps']);
+            ylim(y_axis)
+            print(fig51, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
             
             % plot fraction SO4-reduction vs Cox
             fig6 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
@@ -376,8 +374,8 @@ classdef benthic_test
             end
             ylabel('Fract. of SO_4-reduction (%)');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
-            ylim([0 80])
-            print(fig6, '-depsc2', ['96_Flux_Frac_SO4_red_vs_Cox_gammaN95_' str_date '.eps']);
+            ylim(y_axis)
+            print(fig6, '-depsc2', ['96_Flux_Frac_SO4_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
             
         end
         
@@ -425,7 +423,7 @@ classdef benthic_test
                     [res.zTOC_RCM.k, res.swi.C0i, res.swi.Fnonbioi] = benthic_test.RCM_Dale_2015(res.bsd, res.swi);
                 else
                     [res.zTOC_RCM.k, res.swi.C0i, res.swi.Fnonbioi] = benthic_test.RCM(res.bsd, res.swi);
-                end
+                 end
                 res = res.zTOC_RCM.calc(res.bsd,res.swi, res);
                 O2_demand_flux = -(sum(res.swi.Fnonbioi))*res.bsd.OC/((1-res.bsd.por)./res.bsd.por);
             end
@@ -1474,29 +1472,55 @@ classdef benthic_test
             %% specify k and F speficically as in Dale ea. 2015 and use input flux to calculate non-bioturbated SWI-concentration of POC
             
             
-            k(1)= 1e-10;
-            for i=2:13
-                j = -12+i;
-                k(i)= 3.16*10^j;
+            if(swi.Test_Dale_14G)
+            
+                k(1)= 1e-10;
+                for i=2:13
+                    j = -12+i;
+                    k(i)= 3.16*10^j;
+                end
+                k(14)= 100;
+                %                k(1:10) = 0.08;    % in case we want to degrade all
+
+                F(1) = 0.021746;
+                F(2) = 0.00725275;
+                F(3) = 0.0096717;
+                F(4) = 0.0128974;
+                F(5) = 0.017199;
+                F(6) = 0.0229352;
+                F(7) = 0.0305846;
+                F(8) = 0.0407852;
+                F(9) = 0.0543879;
+                F(10) = 0.0725265;
+                F(11) = 0.0967046;
+                F(12) = 0.12881;
+                F(13) = 0.169822;
+                F(14) = 0.314677;                           
+            else
+                                emin = -15; % as in Dale ea. '15: -10;
+                emax = -log10(swi.p_a)+2;  % as in Dale ea. '15: 2    % upper k limit for k-bins of multi-G approximation
+                if emin >= emax;error('emin >= emax, this cannot be!');end
+                %                 if emax >= log10(200);emax=log10(200);end
+                
+                k(1)= 10^(emin);
+                kk(1)=10^(emin);
+                F(1) = gammainc(swi.p_a*10^emin,swi.p_nu,'lower');
+                kk(swi.nG)=10^(emax);
+                k(swi.nG)=10^(emax);
+                F(swi.nG) = gammainc(swi.p_a*10^emax,swi.p_nu,'upper');
+                
+                % Define the b.c. for all the intermediate fractions
+                
+                G=2:swi.nG-1;
+                ne=emin+(1:swi.nG-2).*(emax-emin)./(swi.nG-1);
+                kk(2:swi.nG-1)=10.^ne;
+                G_inc_0 = gammainc(swi.p_a*kk(1:swi.nG-2),swi.p_nu,'upper'); % G-1 = 1:end-2
+                G_inc_1 = gammainc(swi.p_a*kk(2:swi.nG-1),swi.p_nu,'upper'); % G = 2:end-1
+                F(2:swi.nG-1) = (G_inc_0 - G_inc_1);
+                k(G)=kk(1:swi.nG-2)+(kk(2:swi.nG-1)-kk(1:swi.nG-2))/2;
+                F(F<=eps)=eps;
             end
-            k(14)= 100;
-            %                k(1:10) = 0.08;    % in case we want to degrade all
-            
-            F(1) = 0.021746;
-            F(2) = 0.00725275;
-            F(3) = 0.0096717;
-            F(4) = 0.0128974;
-            F(5) = 0.017199;
-            F(6) = 0.0229352;
-            F(7) = 0.0305846;
-            F(8) = 0.0407852;
-            F(9) = 0.0543879;
-            F(10) = 0.0725265;
-            F(11) = 0.0967046;
-            F(12) = 0.12881;
-            F(13) = 0.169822;
-            F(14) = 0.314677;
-            
+
             if abs(sum(F)-1) > 0.0001;warning('F~=1!!');end
             
             % use the input flux of 6.2 mmol m-2 d-1 from Dale

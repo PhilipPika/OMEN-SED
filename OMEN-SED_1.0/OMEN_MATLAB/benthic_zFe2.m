@@ -212,12 +212,20 @@ classdef benthic_zFe2
             %             r.conczfeIIIh2s = rFe2.A4.*e4_zfeIII+rFe2.B4.*f4_zfeIII + g4_zfeIII;
             % calculate concentration at zinf
             r.conczinfFe2 = rFe2.A4.*e4_zinf+rFe2.B4.*f4_zinf + g4_zinf;
-            
+         	
+%             if(r.conczinfFe2 < 0)
+%                 warning('NEGATIVE conczinfFe2 -- set to zero!');
+%                 r.conczinfFe2 = 0.0;
+%            end
             
             % flux at swi - DO include por so this is per cm^2 water column area
             % DH: added advective flux 28.05.2016
             r.flxswiFe2 = bsd.por.*(obj.DFe21.*(rFe2.A4.*dedz1_0+rFe2.B4.*dfdz1_0 + dgdz1_0) - bsd.w.*(swi.Fe20 - r.conczinfFe2));   % NB: use A4, B4 as these are _xformed_ layer 1 basis functions
-            
+
+            if(r.flxswiFe2 < 0)
+                warning('NEGATIVE flxswiFe2 -- set to zero!');
+                r.flxswiFe2 = 0.0;
+           end                
             % save coeffs for layers 3, 2 and 1
             rFe2.A3 = zfeIII.a.*rFe2.A4 + zfeIII.b.*rFe2.B4 + zfeIII.e;
             rFe2.B3 = zfeIII.c.*rFe2.A4 + zfeIII.d.*rFe2.B4 + zfeIII.f;
