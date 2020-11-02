@@ -284,7 +284,7 @@ classdef benthic_test
             ylabel('JDFe (\mumol m^{-2} d^{-1})');
             xlabel('[O_2]_{BW} (\muM)');
             
-            print(fig1, '-depsc2', ['95_Flux_JFFe2_vs_O2_OMEN_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
+            print(fig1, '-depsc2', ['95_Flux_JFFe2_vs_O2_OMEN_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
             
             % plot FFe2 vs Cox
             fig2 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
@@ -300,7 +300,7 @@ classdef benthic_test
             ylabel('JDFe (\mumol m^{-2} d^{-1})');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
             
-            print(fig2, '-depsc2', ['95_Flux_JFFe2_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
+            print(fig2, '-depsc2', ['95_Flux_JFFe2_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
             
             %% Plot fraction of metabolic pathways
             y_axis = [0 100];
@@ -317,7 +317,7 @@ classdef benthic_test
             ylabel('Fract. of aerobic-reduction (%)');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
             ylim(y_axis)
-            print(fig3, '-depsc2', ['96_Flux_Frac_aerobic_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
+            print(fig3, '-depsc2', ['96_Flux_Frac_aerobic_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
             
             % plot fraction Fe-reduction vs Cox
             % plot FFe2 vs Cox
@@ -332,7 +332,7 @@ classdef benthic_test
             ylabel('Fract. of denitrification (%)');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
             ylim(y_axis)
-            print(fig4, '-depsc2', ['96_Flux_Frac_denitrif_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
+            print(fig4, '-depsc2', ['96_Flux_Frac_denitrif_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
             
             % plot fraction Fe-reduction vs Cox
             fig5 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
@@ -346,7 +346,7 @@ classdef benthic_test
             ylabel('Fract. of Fe-reduction (%)');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
             %            ylim([0 80])
-            print(fig5, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction_zoom.eps']);
+            print(fig5, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction_zoom.eps']);
             
             % plot fraction Fe-reduction vs Cox
             % plot FFe2 vs Cox
@@ -361,7 +361,7 @@ classdef benthic_test
             ylabel('Fract. of Fe-reduction (%)');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
             ylim(y_axis)
-            print(fig51, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
+            print(fig51, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
             
             % plot fraction SO4-reduction vs Cox
             fig6 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
@@ -375,7 +375,7 @@ classdef benthic_test
             ylabel('Fract. of SO_4-reduction (%)');
             xlabel('[Cox] (mmol m^{-2} d^{-1})');
             ylim(y_axis)
-            print(fig6, '-depsc2', ['96_Flux_Frac_SO4_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2correction.eps']);
+            print(fig6, '-depsc2', ['96_Flux_Frac_SO4_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
             
         end
         

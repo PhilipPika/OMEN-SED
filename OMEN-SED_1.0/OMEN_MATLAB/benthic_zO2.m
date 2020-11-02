@@ -147,10 +147,10 @@ classdef benthic_zO2
             
             %            FO2 = 0.0; % no secondary redox!
             if(swi.TwoG_OM_model)
-                FO2 = zox./(bsd.zoxgf + zox).*r.zTOC.calcReac(zox, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r) + bsd.gammaFe2*bsd.O2Fe2.*swi.Flux_FeIII0;  % taking into account approximated Fe2-flux to zox, just as 'gammaFe2 * O2Fe2* Influx_Fe3+'
+                FO2 = zox./(bsd.zoxgf + zox).*r.zTOC.calcReac(zox, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r) + (1-bsd.gammaFe_pp)*bsd.gammaFe2*bsd.O2Fe2.*swi.Flux_FeIII0;  % taking into account approximated Fe2-flux to zox, just as 'gammaFe2 * O2Fe2* Influx_Fe3+'
                 % FO2 = zox./(bsd.zoxgf + zox).*r.zTOC.calcReac(zox, bsd.zinf, tmpreac1, tmpreac2, bsd, swi, r);                                  % not taking into account iron re-oxidation
             else
-                FO2 = zox./(bsd.zoxgf + zox).*r.zTOC_RCM.calcReac(zox, bsd.zinf, tmpreac1, bsd, swi, r) + bsd.gammaFe2*bsd.O2Fe2.*swi.Flux_FeIII0;        % taking into account approximated Fe2-flux to zox, just as 'gammaFe2 * O2Fe2 * Influx_Fe3+'
+                FO2 = zox./(bsd.zoxgf + zox).*r.zTOC_RCM.calcReac(zox, bsd.zinf, tmpreac1, bsd, swi, r) + (1-bsd.gammaFe_pp)*bsd.gammaFe2*bsd.O2Fe2.*swi.Flux_FeIII0;        % taking into account approximated Fe2-flux to zox, just as 'gammaFe2 * O2Fe2 * Influx_Fe3+'
                 % FO2 = zox./(bsd.zoxgf + zox).*r.zTOC_RCM.calcReac(zox, bsd.zinf, tmpreac1, bsd, swi, r);        % not taking into account iron re-oxidation             
             end
             % NB (1-bsd.por)/bsd.por  has been included in OC etc stoich factors, so this is flux / cm^2 pore area
