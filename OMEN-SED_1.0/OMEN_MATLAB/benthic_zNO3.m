@@ -43,6 +43,8 @@ classdef benthic_zNO3
                         r.zno3 = bsd.zinf;
                         bctype = 2; % BC: zero flux
                     else
+                        fun0= fun(1e-10);
+                        funinf=fun(bsd.zinf);
                         r.zno3=fzero(fun, [max(r.zox, 1e-10), bsd.zinf] ,bsd.fzerooptions);
                         bctype = 1; % BC: zero concentration
                         conczinf = 0.0;

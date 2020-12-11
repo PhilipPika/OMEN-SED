@@ -49,7 +49,7 @@ classdef benthic_main < handle
         gamma=0.95;                           	% fraction of NH4 that is oxidised in oxic layer
         gammaH2S=0.95;                         	% fraction of H2S that is oxidised in oxic layer
         gammaH2SFe=0.0;                       	% fraction of H2S that is oxidised with FeIII  (assume after zFeIII only sulfate reduction, as we don't know zSO4 yet)
-        gammaFe2;                           % fraction of Fe2 that is oxidised in oxic layer, moved to Fe2-routine as calculated with S. vd Velde's fit to Cox and BW [O2])
+        gammaFe2;                               % fraction of Fe2 that is oxidised in oxic layer, moved to Fe2-routine as calculated with S. vd Velde's fit to Cox and BW [O2])
         gammaFe_pp;                         	% fraction of Fe2 that is precipitated as pyrite, moved to Fe2-routine as calculated with S. vd Velde's fit to Cox and BW [O2])
         gammaFeS=0.0;                         	% fraction of H2S that is precipitated as pyrite
         gammaCH4=0.99;                         	% fraction of CH4 that is oxidised at SO4
@@ -77,8 +77,8 @@ classdef benthic_main < handle
         %fzerooptions = optimset('TolX',0.001);
         fzerooptions = optimset('TolX',100*eps);        % 2.2e-14
         tol_Fe3 = 10^4*eps;
-%        fzerooptions_Fe3 = optimset('TolX',10^4*eps);   % 2.2e-12
-        fzerooptions_Fe3 = optimset('Display','iter');
+        fzerooptions_Fe3 = optimset('TolX',10^4*eps);   % 2.2e-12
+%        fzerooptions_Fe3 = optimset('Display','iter');
     end
     
     methods
@@ -157,7 +157,7 @@ classdef benthic_main < handle
             c1 = 3;
             c2 = 10;
             w = w1/(1+(wdepth/z1)^c1) + w2/(1+(wdepth/z2)^c2);
-            w = 60/1000;    % To compare with Dale et al. (2015)
+%            w = 60/1000;    % To compare with Dale et al. (2015)
         end
         
         function Dbio = biorate(wdepth)

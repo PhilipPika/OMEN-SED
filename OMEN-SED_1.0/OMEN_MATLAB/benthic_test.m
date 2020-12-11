@@ -51,8 +51,8 @@ classdef benthic_test
             
             
             %            swi.FeIII0=2.8E-005; %3.0E-006;                   	% FeIII concentration at SWI (mol/cm^3) --> TODO: needs to be a flux!
-            Fe_influx_Dale = 0.1667*1110.0E-006;                     % FeIII influx from Dale but just 16.67% is available for DIR (See his Tab. 2, footnote d)
-            swi.Flux_FeIII0 =  (Fe_influx_Dale)*365/100^2;           % Dale 1110 mol/(m^2 day)   -->  mol/(cm^2 yr):     *365/100^2
+%             Fe_influx_Dale = 0.1667*1110.0E-006;                     % FeIII influx from Dale but just 16.67% is available for DIR (See his Tab. 2, footnote d)
+%             swi.Flux_FeIII0 =  (Fe_influx_Dale)*365/100^2;           % Dale 1110 mol/(m^2 day)   -->  mol/(cm^2 yr):     *365/100^2
             %            swi.FeIII0= swi.Flux_FeIII0/((1-bsd.por)*bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
             
             swi.O20=200.0E-009;                                 % O2  concentration at SWI (mol/cm^3)
@@ -175,14 +175,295 @@ classdef benthic_test
             Output(1,12) = res.zso4;
         end
         
+        function [Cox_rate_out, Penetration_out, Flux_Fe2_Dale_units, debug, Fe_fail_xy, dxdy] = run_OMEN_RCM_global(exp_name, Zinf)
+            %% run global OMEN-SED with boundary conditions as in data
+            % exp_name: string for experiment name
+            % default_01: 1-degree resolution, 1m sediment-column, a-value = Arndt-parametr.
+            
+            
+            warning('query','all')
+            warning('off','all')
+            warning
+            
+            depth_dep_a = true;     % use depth-dependent a-values?
+            calc_res = 3;           % 1: 1/4°;  2: 1°;  3: 2°
+            
+            Fe3_HR_frac = 0.1667;           % 16.67% of total FeOOH-influx is HR and thus available for DIR (See his Tab. 2, footnote d)
+            hypoxic_th = 63.0e-9;           % threshold for hypoxia after Dale et al. '15
+            Fe3_in_SMI_frac_oxic = 0.6;     % Fe3_HR used for Sulphide-Mediated Iron reduction under oxic BW (i.e. not available for DIR)
+            Fe3_in_SMI_frac_hypoxic = 0.3;  % Fe3_HR used for Sulphide-Mediated Iron reduction under hypoxic BW (i.e. not available for DIR)
+            Cox_rate_out.grid_hypoxic = 0;
+            
+            Fe_fail_xy(1,:)=[0 0];
+            swi = benthic_test.default_swi();
+            swi.flux = false;
+            
+            swi.sed_column_depth = Zinf;  % use Zinf as bsd.zinf
+
+            swi.TwoG_OM_model = false;
+            swi.Test_Dale = false;  % he used the same a-value evrywhere - I don't want that -- plus I use 100G
+            %             swi.Test_Dale_14G = true;
+            %            	if(swi.Test_Dale)
+            %                 if(swi.Test_Dale_14G)
+            %                     swi.nG = 14;
+            %                 end
+            %             end
+            switch calc_res
+                case 1
+%            if(calc_high_res)
+                % load boundary conditions - all in 1/4 degree resolution
+                load './data/toc_in_NaN.mat'                                       % TOC at SWI [wt%]     -- need to translate to mol/cm^3 solid phase, i.e. *1e-2/12*bsd.rho_sed
+                load './data/a_hr_updated.mat'                                  %  Parameter a [yrs]  (the apparent initial age of the initial organic matter mixture ) as fct of sedimentation rate dependent formulation for a (Arndt et al., 2013)
+                load './data/Tmp_BW_hr_updated.mat'                             % BW temperature [°C]
+                load './data/sed_holo_hr_updated.mat'                           % Sedimentation rate [cm/yr] -- as in Bradley ea. 2020, after Burwicz ea. 2011
+                load './data/O2_BW_WOA2018_hr_updated.mat'                  	% BW  O2 [muM = 10^-6 mol/kg]  -- need to convert into mol/cm^3 , i.e. *10^-3
+                load './data/NO3_BW_hr_updated.mat'                             % BW  NO3 [muM = 10^-6 mol/kg]  -- need to convert into mol/cm^3 , i.e. *10^-3
+                load './data/FluxFe_total_Burw_BW_hr_updated.mat'               % Total FeOOH settling-flux [mumol/(cm2 yr)] -- just 16.67% of this is available for OM-degradation
+                load './data/water_depth_updated.mat'                           % Seafloor depth [m]
+            	water_depth_updated = -water_depth_updated;
+                %          	load data/long.dat
+                load data/lat.dat
+                
+                case 2
+                % load boundary conditions - all in 1 degree resolution
+                load './data/BC_1degrees/toc_01.mat'                                       % TOC at SWI [wt%]     -- need to translate to mol/cm^3 solid phase, i.e. *1e-2/12*bsd.rho_sed
+                toc_in = toc_01;
+                load './data/BC_1degrees/a_01_updated.mat'                                  %  Parameter a [yrs]  (the apparent initial age of the initial organic matter mixture ) as fct of sedimentation rate dependent formulation for a (Arndt et al., 2013)
+                a_hr_updated = a_01_updated;                
+                load './data/BC_1degrees/Tmp_BW_01_updated.mat'                             % BW temperature [°C]
+                Tmp_BW_hr_updated = Tmp_BW_01_updated;
+                load './data/BC_1degrees/sed_holo_01_updated.mat'                           % Sedimentation rate [cm/yr] -- as in Bradley ea. 2020, after Burwicz ea. 2011
+                sed_holo_hr_updated = sed_holo_01_updated;
+                load './data/BC_1degrees/O2_BW_WOA2018_01_updated.mat'                  	% BW  O2 [muM = 10^-6 mol/kg]  -- need to convert into mol/cm^3 , i.e. *10^-3
+                O2_BW_WOA2018_hr_updated = O2_BW_WOA2018_01_updated;
+                load './data/BC_1degrees/NO3_BW_01_updated.mat'                             % BW  NO3 [muM = 10^-6 mol/kg]  -- need to convert into mol/cm^3 , i.e. *10^-3
+                NO3_BW_hr_updated = NO3_BW_01_updated;
+%                load './data/BC_1degrees/FluxFe_total_Burw_BW_01_updated.mat'               % Total FeOOH settling-flux [mumol/(cm2 yr)] -- just 16.67% of this is available for OM-degradation; used por=0.7 to calculate it
+%                FluxFe_total_Burw_BW_hr_updated = FluxFe_total_Burw_BW_01_updated;
+                load './data/BC_1degrees/FluxFe_total_Burw_BW_01_por85_updated.mat'               % Total FeOOH settling-flux [mumol/(cm2 yr)] -- just 16.67% of this is available for OM-degradation; used por=0.85 to calculate it                                         
+                FluxFe_total_Burw_BW_hr_updated = FluxFe_total_Burw_BW_01_por85_updated;
+                load './data/BC_1degrees/water_depth_updated.mat'                           % Seafloor depth [m]
+                water_depth_updated = -water_depth_updated;
+                %         	load data/BC_1degrees/long_WOA_01.mat
+                load data/BC_1degrees/lat_WOA_01.mat
+                %            long = long_WOA_01;
+                lat = lat_WOA_01;
+                
+                case 3 
+                                   % load boundary conditions - all in 1 degree resolution
+                load './data/BC_2degrees/toc_02.mat'                                       % TOC at SWI [wt%]     -- need to translate to mol/cm^3 solid phase, i.e. *1e-2/12*bsd.rho_sed
+                toc_in = toc_02;
+                load './data/BC_2degrees/a_02_updated.mat'                                  %  Parameter a [yrs]  (the apparent initial age of the initial organic matter mixture ) as fct of sedimentation rate dependent formulation for a (Arndt et al., 2013)
+                a_hr_updated = a_02_updated;                
+                load './data/BC_2degrees/Tmp_BW_02_updated.mat'                             % BW temperature [°C]
+                Tmp_BW_hr_updated = Tmp_BW_02_updated;
+                load './data/BC_2degrees/sed_holo_02.mat'                           % Sedimentation rate [cm/yr] -- as in Bradley ea. 2020, after Burwicz ea. 2011
+                sed_holo_hr_updated = sed_holo_02;
+                load './data/BC_2degrees/O2_BW_WOA2018_02_updated.mat'                  	% BW  O2 [muM = 10^-6 mol/kg]  -- need to convert into mol/cm^3 , i.e. *10^-3
+                O2_BW_WOA2018_hr_updated = O2_BW_WOA2018_02_updated;
+                load './data/BC_2degrees/NO3_BW_02_updated.mat'                             % BW  NO3 [muM = 10^-6 mol/kg]  -- need to convert into mol/cm^3 , i.e. *10^-3
+                NO3_BW_hr_updated = NO3_BW_02_updated;
+%                load './data/BC_2degrees/FluxFe_total_Burw_BW_02_updated.mat'               % Total FeOOH settling-flux [mumol/(cm2 yr)] -- just 16.67% of this is available for OM-degradation; used por=0.7 to calculate it
+%                FluxFe_total_Burw_BW_hr_updated = FluxFe_total_Burw_BW_02_updated;
+                load './data/BC_2degrees/FluxFe_total_Burw_BW_02_por85_updated.mat'               % Total FeOOH settling-flux [mumol/(cm2 yr)] -- just 16.67% of this is available for OM-degradation; used por=0.85 to calculate it                                         
+                FluxFe_total_Burw_BW_hr_updated = FluxFe_total_Burw_BW_02_por85_updated;
+                load './data/BC_2degrees/water_depth_02_updated.mat'                           % Seafloor depth [m]
+                water_depth_updated = water_depth_02_updated;
+                %         	load data/BC_2degrees/long_WOA_02.mat
+                load data/BC_2degrees/lat_02.mat
+                %            long = long_WOA_02;
+                lat = lat_02;
+                
+            end
+            
+            if(depth_dep_a)
+                a_hr_updated(water_depth_updated<2000) = 3e-4; % shelf and slope environments after Dale and Thullner
+             	a_hr_updated((water_depth_updated>=2000) & (water_depth_updated< 3000)) = 5.0; % intermediate environments compare Bradley and Thullner
+             	a_hr_updated((water_depth_updated>=3000) & (water_depth_updated< 4250)) = 20.0; % intermediate environments after Dale
+             	a_hr_updated(water_depth_updated>=4250) = 100.0; % abyss
+            end
+            
+            % counters for Problems in Fe-calculation
+            debug.iter_fun6 = 0;      % boundaries have same sign -> reduce gammaFe2
+            debug.iter_Fefail = 1;    % Problem macthing desired Fe3-influx (also zFe3 < zinf) start with 1 bc I initialized it with [0 0]
+            
+            
+            
+            [m,n]=size(toc_in);
+            tic
+            %% loop through lat - lon
+            xstart = 1;
+            ystart = 1;
+            for x=xstart:m
+                fprintf('-------------- New latitude ----------- \n');
+                fprintf('x, %i \n',  x);
+                
+                % calculate volume
+                % convert deg to cm CODAS package (by E.Firing,et al.) -- http://pordlabs.ucsd.edu/matlab/coord.htm
+                switch calc_res
+                    case 1
+                    dlat = 0.25;    % latitude difference in degrees for high-res
+                    dlon = 0.25;    % longitude difference in degrees for high-res
+                    case 2
+                    dlat = 1.0;     % latitude difference in degrees for 1 degree resolution
+                    dlon = 1.0;     % longitude difference in degrees for 1 degree resolution
+                    case 3
+                    dlat = 2.0;     % latitude difference in degrees for 2 degree resolution
+                    dlon = 2.0;     % longitude difference in degrees for 2 degree resolution
+                end
+                
+                rlat = lat(x) * pi/180;
+                m = 111132.09  - 566.05 * cos(2 * rlat)+ 1.2 * cos(4 * rlat);
+                dy = dlat*m;        % latitude difference in meters
+                p = 111415.13 * cos(rlat) - 94.55 * cos(3 * rlat);
+                dx = dlon*p;        % longitude difference in meters
+                
+                for y=ystart:n
+                    %                 fprintf('\n');
+                    fprintf('x, y, %i %i \n',  x, y);
+                    % now check for sed_holo or toc = NaN -- if yes set output to NaN
+                    if ((isnan(sed_holo_hr_updated(x,y))) | (isnan(toc_in(x,y))) | (isnan(Tmp_BW_hr_updated(x,y))) | (isnan(O2_BW_WOA2018_hr_updated(x,y))) | (isnan(water_depth_updated(x,y))))
+                        dxdy(x,y)   = NaN;
+                        
+                        Cox_rate_out.Cox_aerobic(x,y) = NaN;
+                        Cox_rate_out.Cox_denitr(x,y) = NaN;
+                        Cox_rate_out.Cox_FeIII(x,y) = NaN;
+                        Cox_rate_out.Cox_sulfate(x,y) = NaN;
+                        Cox_rate_out.Cox_total(x,y) = NaN;
+                        Cox_rate_out.Total_rate_sum(x,y) = NaN;
+                        
+                        Penetration_out.zox(x,y) = NaN;
+                        Penetration_out.zno3(x,y) = NaN;
+                        Penetration_out.zfeIII(x,y) = NaN;
+                        Penetration_out.zso4(x,y) = NaN;
+                        
+                        Flux_Fe2_Dale_units(x,y) = NaN;
+                        
+%                         % not necessary - results are essentially the
+%                         same as whe using calReac above
+%                         Cox_rate_out_flux.Cox_aerobic(x,y) = NaN;
+%                         Cox_rate_out_flux.Cox_denitr(x,y) = NaN;
+%                         Cox_rate_out_flux.Cox_FeIII(x,y) = NaN;
+%                         Cox_rate_out_flux.Cox_sulfate(x,y) = NaN;
+%                         Cox_rate_out_flux.Cox_Total(x,y) = NaN;
+                        
+                    else        % valid BC: run the model
+                        
+                        
+                        rho_sed_loc = 2.5;
+                        swi.C0_nonbio = toc_in(x,y)*1e-2/12*rho_sed_loc;
+                        swi.p_a = a_hr_updated(x,y);
+                        %swi.p_a = 15; %a_hr_updated(x,y);
+                        swi.T = Tmp_BW_hr_updated(x,y);
+                        swi.BC_sed_rate_flag = true;    % flag for existing BC for sed-rate
+                        swi.BC_sed_rate = sed_holo_hr_updated(x,y);     % holocene sed-rate
+                        swi.O20 = O2_BW_WOA2018_hr_updated(x,y)*10^(-9);
+                        swi.NO30 = NO3_BW_hr_updated(x,y)*10^(-9);
+                        if(swi.O20 > hypoxic_th)
+                            swi.Flux_FeIII0 = (1-Fe3_in_SMI_frac_oxic)*Fe3_HR_frac*FluxFe_total_Burw_BW_hr_updated(x,y)*10^(-6);  % just reactivre part in mol/(cm2 yr)
+                        else
+                          	swi.Flux_FeIII0 = (1-Fe3_in_SMI_frac_hypoxic)*Fe3_HR_frac*FluxFe_total_Burw_BW_hr_updated(x,y)*10^(-6);  % just reactivre part in mol/(cm2 yr)
+                            Cox_rate_out.grid_hypoxic=Cox_rate_out.grid_hypoxic+1;
+                        end
+                        %                  	Fe_influx_Dale = 0.1667*1110.0E-006;                     % FeIII influx from Dale but just 16.67% is available for DIR (See his Tab. 2, footnote d)
+                        %                     swi.Flux_FeIII0 =  (Fe_influx_Dale)*365/100^2;           % Dale 1110 mol/(m^2 day)   -->  mol/(cm^2 yr):     *365/100^2
+                        
+                        swi.BC_wdepth_flag = true;
+                        swi.BC_wdepth = water_depth_updated(x,y);
+                        if(swi.BC_wdepth>7900)
+                            swi.BC_wdepth %=7900;
+                        end
+                        
+                        res=benthic_test.test_benthic(1,swi);
+                        debug.iter_fun6 = debug.iter_fun6 + res.iter_fun6;
+                        debug.iter_Fefail = debug.iter_Fefail + res.iter_Fefail;
+                        % save location for fauiled Fe-calculation
+                        if(res.iter_Fefail > 0)
+                            Fe_fail_xy(debug.iter_Fefail, :) = [x y];
+                        end
+                        
+                        dxdy(x,y)   = dx*dy;    % m^2 per grid-cell
+                        
+                        
+                        swi.C0i = res.swi.C0i;
+                        % oxidation rates in mmol m-2 yr-1
+                        Cox_rate_out.Cox_aerobic(x,y) = res.zTOC_RCM.calcReac(0.0, res.zox, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2;
+                        if(swi.Nitrogen)
+                            Cox_rate_out.Cox_denitr(x,y) = res.zTOC_RCM.calcReac(res.zox, res.zno3, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2;
+                        end
+                        if(res.swi.Iron)
+                            Cox_rate_out.Cox_FeIII(x,y) = res.zTOC_RCM.calcReac(res.zno3, res.zfeIII,1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2;
+                        end
+                        Cox_rate_out.Cox_sulfate(x,y) = res.zTOC_RCM.calcReac(res.zfeIII,res.zso4, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2;
+                        Cox_rate_out.Cox_total(x,y) = res.zTOC_RCM.calcReac(0.0, res.bsd.zinf, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2;
+                        Cox_rate_out.Total_rate_sum(x,y) = Cox_rate_out.Cox_aerobic(x,y) + Cox_rate_out.Cox_denitr(x,y) + Cox_rate_out.Cox_FeIII(x,y) + Cox_rate_out.Cox_sulfate(x,y);
+                        
+                        Penetration_out.zox(x,y) = res.zox;
+                        Penetration_out.zno3(x,y) = res.zno3;
+                        Penetration_out.zfeIII(x,y) = res.zfeIII;
+                        Penetration_out.zso4(x,y) = res.zso4;
+                        % compare results with Dale
+                        [F_TOC_swi, F_TOC1_swi] = res.zTOC_RCM.calcCflx(0, res.bsd, res.swi, res);
+                        [F_TOC_inf, F_TOC1_inf] = res.zTOC_RCM.calcCflx(res.bsd.zinf, res.bsd, res.swi, res);
+                        
+                        Cox_total_diff = (F_TOC_swi-F_TOC_inf)*1000 *100^2/365;      % in units of mmol m-2 d-1 as in Dale ea. 2015, Fig. 2a
+                        Flux_Fe2_Dale_units(x,y) = res.flxswiFe2 *10^6 *100^2 /365;                   % in units of umol m-2 d-1 as in Dale ea. 2015, Fig. 3
+                        
+                        
+%                         % not necessary - results are essentially the
+%                         same as whe using calReac above
+%                         % use fluxes to calculate burial efficiency and total Cox:
+%                         
+%                         [F_TOC_zox, F_TOC1_zox] = res.zTOC_RCM.calcCflx(res.zox, res.bsd, res.swi, res);
+%                         [F_TOC_zno3, F_TOC1_zno3] = res.zTOC_RCM.calcCflx(res.zno3, res.bsd, res.swi, res);
+%                         [F_TOC_zfe3, F_TOC1_zfe3] = res.zTOC_RCM.calcCflx(res.zfeIII, res.bsd, res.swi, res);
+%                         [F_TOC_zso4, F_TOC1_zso4] = res.zTOC_RCM.calcCflx(res.zso4, res.bsd, res.swi, res);
+%                         
+%                         % in mmol m-2 day-1
+%                         Cox_rate_out_flux.Cox_aerobic(x,y) = (F_TOC_swi-F_TOC_zox)*1000 *100^2/365;
+%                         Cox_rate_out_flux.Cox_denitr(x,y) = (F_TOC_zox-F_TOC_zno3)*1000 *100^2/365;
+%                         Cox_rate_out_flux.Cox_FeIII(x,y) = (F_TOC_zno3-F_TOC_zfe3)*1000 *100^2/365;
+%                         Cox_rate_out_flux.Cox_sulfate(x,y) = (F_TOC_zfe3-F_TOC_zso4)*1000 *100^2/365;
+%                         Cox_rate_out_flux.Cox_Total(x,y) = (F_TOC_swi-F_TOC_inf)*1000 *100^2/365;
+%                         
+                    end
+                end
+            end
+            toc
+            %% plot output
+            %            benthic_test.plot_Fe_SA(swi.POC_flux, O20, Cox_rate_out, Penetration_out, Flux_Fe2_Dale_units, swi.nG)
+            
+            str_date = [datestr(date,7), datestr(date,5), datestr(date,11)];
+            
+            save(['./output/Cox_rate_out_' exp_name '_' str_date '.mat'] , 'Cox_rate_out')
+            save(['./output/Flux_Fe2_Dale_units_' exp_name '_' str_date '.mat'] , 'Flux_Fe2_Dale_units')
+            save(['./output/Penetration_out_' exp_name '_' str_date '.mat'] , 'Penetration_out')
+            save(['./output/Fe_fail_xy_' exp_name '_' str_date '.mat'] , 'Fe_fail_xy')
+%            save(['./output/Cox_rate_out_flux' exp_name '_' str_date '.mat'] , 'Cox_rate_out_flux')
+        	save(['./output/dxdy_' exp_name '_' str_date '.mat'] , 'dxdy')
+
+        end
+        
         
         function [Cox_rate_out, Penetration_out, Flux_Fe2_Dale_units] = run_OMEN_RCM_testDale_POC()
             % run OMEN-SED with default SWI conditions as in default_swi()
-            clear
+            clear all
             swi = benthic_test.default_swi();
             swi.TwoG_OM_model = false;
             
+
+            Fe3_HR_frac = 0.1667;                                           % 16.67% of total FeOOH-influx is HR and thus available for DIR (See his Tab. 2, footnote d)
+        	Flux_FeIII0_in = Fe3_HR_frac*1110.0E-006*365/100^2;           % Dale 1110 mol/(m^2 day)   -->  mol/(cm^2 yr):     *365/100^2
+
+            hypoxic_th = 63.0e-9;           % threshold for hypoxia after Dale et al. '15
+            Fe3_in_SMI_frac_oxic = 0.6;     % Fe3_HR used for Sulphide-Mediated Iron reduction under oxic BW (i.e. not available for DIR)
+            Fe3_in_SMI_frac_hypoxic = 0.3;  % Fe3_HR used for Sulphide-Mediated Iron reduction under hypoxic BW (i.e. not available for DIR)
+
             if(swi.Test_Dale)
+                swi.BC_wdepth_flag = true;
+                swi.BC_wdepth = 350;    % for Dale experiment
+                swi.BC_sed_rate_flag = true; 
+                swi.BC_sed_rate = 60/1000;  % To compare with Dale et al. (2015)
                 if(swi.Test_Dale_14G)
                     swi.nG = 14;
                 end
@@ -192,16 +473,23 @@ classdef benthic_test
             end
             
             swi.POC_flux = [0.5 1 2 4 6 8 10 12 14 16];
+            swi.flux = true;
             O20 = [1e-9 2e-9 5e-9 10e-9 15e-9 25e-9 50e-9 100e-9 200e-9];
             
             for i=1:length(swi.POC_flux)
                 i
                 for j=1:length(O20)
-                fprintf('\n');
-                fprintf('i, j %i %i \n',  i, j);
+                    fprintf('\n');
+                    fprintf('i, j %i %i \n',  i, j);
 
                     swi.POCi = i;
                     swi.O20 = O20(j);
+                    if(swi.O20 > hypoxic_th)
+                        swi.Flux_FeIII0 = (1-Fe3_in_SMI_frac_oxic)*Flux_FeIII0_in;  % just reactivre part in mol/(cm2 yr)
+                    else
+                        swi.Flux_FeIII0 = (1-Fe3_in_SMI_frac_hypoxic)*Flux_FeIII0_in;  % just reactivre part in mol/(cm2 yr)
+                    end
+                    
                     res=benthic_test.test_benthic(1,swi);
                     % set date-time or string going into plot function
                     
@@ -211,12 +499,19 @@ classdef benthic_test
                         Cox_rate_out.Cox_denitr(i,j) = res.zTOC_RCM.calcReac(res.zox, res.zno3, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
                     end
                     if(res.swi.Iron)
+                        if(res.zno3 == res.bsd.zinf)
+                            Cox_rate_out.Cox_FeIII(i,j) = 0.0;
+                        else
                         Cox_rate_out.Cox_FeIII(i,j) = res.zTOC_RCM.calcReac(res.zno3, res.zfeIII,1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
+                        end
                     end
                     Cox_rate_out.Cox_sulfate(i,j) = res.zTOC_RCM.calcReac(res.zfeIII,res.zso4, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
                     Cox_rate_out.Cox_total(i,j) = res.zTOC_RCM.calcReac(0.0, res.bsd.zinf, 1*(1-res.bsd.por), res.bsd, swi, res)*1000 *100^2/365;
                     Cox_rate_out.Total_rate_sum(i,j) = Cox_rate_out.Cox_aerobic(i,j) + Cox_rate_out.Cox_denitr(i,j) + Cox_rate_out.Cox_FeIII(i,j) + Cox_rate_out.Cox_sulfate(i,j);
                     
+                    Cox_frac_Fe_red(i,j)=Cox_rate_out.Cox_FeIII(i,j)/Cox_rate_out.Cox_total(i,j)*100;
+                  	Cox_frac_Fe_red_sum(i,j)=Cox_rate_out.Cox_FeIII(i,j)/Cox_rate_out.Total_rate_sum(i,j)*100;
+
                     Penetration_out.zox(i,j) = res.zox;
                     Penetration_out.zno3(i,j) = res.zno3;
                     Penetration_out.zfeIII(i,j) = res.zfeIII;
@@ -262,136 +557,33 @@ classdef benthic_test
             
         end
         
-        function plot_Fe_SA(POC_flux, O20, Cox_rate_out, Penetration_out, Flux_Fe2_Dale_units, nG)
-            %% plot various results for the Fe analysis
-            
-            str_date = datestr(now,'ddmmyy');
-
-            %% plor FFe efflux
-            x_axis = [0 14];
-            y_axis = [0 200];
-            
-            % plot FFe2 vs BW O2
-            fig1 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
-            set(0,'defaultLineLineWidth', 2)
-            set(0,'DefaultAxesFontSize',12)
-            color = parula(length(POC_flux));
-            hold on
-            for i=1:length(POC_flux)
-                plot(O20, Flux_Fe2_Dale_units(i,:),'x-','Color',color(i,:))
-            end
-%            ylim(y_axis)
-            ylabel('JDFe (\mumol m^{-2} d^{-1})');
-            xlabel('[O_2]_{BW} (\muM)');
-            
-            print(fig1, '-depsc2', ['95_Flux_JFFe2_vs_O2_OMEN_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
-            
-            % plot FFe2 vs Cox
-            fig2 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
-            set(0,'defaultLineLineWidth', 2)
-            set(0,'DefaultAxesFontSize',12)
-            color = parula(length(O20));
-            hold on
-            for j=1:length(O20)
-                plot(Cox_rate_out.Cox_total(:,j), Flux_Fe2_Dale_units(:,j),'x-','Color',color(j,:))
-            end
-            xlim(x_axis)
-%            ylim(y_axis)
-            ylabel('JDFe (\mumol m^{-2} d^{-1})');
-            xlabel('[Cox] (mmol m^{-2} d^{-1})');
-            
-            print(fig2, '-depsc2', ['95_Flux_JFFe2_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
-            
-            %% Plot fraction of metabolic pathways
-            y_axis = [0 100];
-            % plot fraction aerobic-reduction vs Cox
-            % plot FFe2 vs Cox
-            fig3 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
-            set(0,'defaultLineLineWidth', 2)
-            set(0,'DefaultAxesFontSize',12)
-            color = parula(length(O20));
-            hold on
-            for j=1:length(O20)
-                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_aerobic(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
-            end
-            ylabel('Fract. of aerobic-reduction (%)');
-            xlabel('[Cox] (mmol m^{-2} d^{-1})');
-            ylim(y_axis)
-            print(fig3, '-depsc2', ['96_Flux_Frac_aerobic_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
-            
-            % plot fraction Fe-reduction vs Cox
-            % plot FFe2 vs Cox
-            fig4 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
-            set(0,'defaultLineLineWidth', 2)
-            set(0,'DefaultAxesFontSize',12)
-            color = parula(length(O20));
-            hold on
-            for j=1:length(O20)
-                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_denitr(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
-            end
-            ylabel('Fract. of denitrification (%)');
-            xlabel('[Cox] (mmol m^{-2} d^{-1})');
-            ylim(y_axis)
-            print(fig4, '-depsc2', ['96_Flux_Frac_denitrif_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
-            
-            % plot fraction Fe-reduction vs Cox
-            fig5 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
-            set(0,'defaultLineLineWidth', 2)
-            set(0,'DefaultAxesFontSize',12)
-            color = parula(length(O20));
-            hold on
-            for j=1:length(O20)
-                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_FeIII(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
-            end
-            ylabel('Fract. of Fe-reduction (%)');
-            xlabel('[Cox] (mmol m^{-2} d^{-1})');
-            %            ylim([0 80])
-            print(fig5, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction_zoom.eps']);
-            
-            % plot fraction Fe-reduction vs Cox
-            % plot FFe2 vs Cox
-            fig51 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
-            set(0,'defaultLineLineWidth', 2)
-            set(0,'DefaultAxesFontSize',12)
-            color = parula(length(O20));
-            hold on
-            for j=1:length(O20)
-                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_FeIII(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
-            end
-            ylabel('Fract. of Fe-reduction (%)');
-            xlabel('[Cox] (mmol m^{-2} d^{-1})');
-            ylim(y_axis)
-            print(fig51, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
-            
-            % plot fraction SO4-reduction vs Cox
-            fig6 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
-            set(0,'defaultLineLineWidth', 2)
-            set(0,'DefaultAxesFontSize',12)
-            color = parula(length(O20));
-            hold on
-            for j=1:length(O20)
-                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_sulfate(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
-            end
-            ylabel('Fract. of SO_4-reduction (%)');
-            xlabel('[Cox] (mmol m^{-2} d^{-1})');
-            ylim(y_axis)
-            print(fig6, '-depsc2', ['96_Flux_Frac_SO4_red_vs_Cox_' num2str(nG) 'G_' str_date '_FluxFe2_O2correction.eps']);
-            
-        end
-        
         function res = test_benthic( ncl, swi )
             %            loc_BW_O2_anoxia = 5.0e-9;       	% set to 5.0 nanomol/cm^3
+            calc_P_DIC_ALK=false;
+            write_output = false;
+            
+            % counters for problems in calculation
+            res.iter_fun6 = 0;      % boundaries have same sign -> reduce gammaFe2
+            res.iter_Fefail = 0;    % Problem macthing desired Fe3-influx (also zFe3 < zinf)
+            
             if nargin < 1
                 ncl = 1;
             end
             
-            if(swi.Test_Dale)
-                res.bsd = benthic_main(ncl, 350);   % specify 350m water-depth
+            if(swi.BC_wdepth_flag)
+                res.bsd = benthic_main(ncl, swi.BC_wdepth);   % specify 350m water-depth
+                res.bsd.zinf = swi.sed_column_depth;
             else
                 res.bsd = benthic_main(ncl);
             end
             res.bsd.usescalarcode = ncl==1;
             
+            if(swi.BC_sed_rate_flag)
+                res.bsd.w = swi.BC_sed_rate;
+                %                 if(res.bsd.w>0.1)
+                %                 res.bsd.w = 0.0005;    % To compare with Dale et al. (2015)
+                %                 end
+            end
             
             if nargin < 2 || isempty(swi)
                 swi = benthic_test.default_swi();
@@ -413,7 +605,7 @@ classdef benthic_test
                 res.zTOC_RCM = benthic_zTOC_RCM(res.bsd);
             end
             
-            tic;
+            %            tic;
             if(swi.TwoG_OM_model)
                 res = res.zTOC.calc(res.bsd,res.swi, res);
                 O2_demand_flux = -(res.swi.Fnonbio1+res.swi.Fnonbio2)*res.bsd.OC/((1-res.bsd.por)./res.bsd.por);
@@ -423,7 +615,7 @@ classdef benthic_test
                     [res.zTOC_RCM.k, res.swi.C0i, res.swi.Fnonbioi] = benthic_test.RCM_Dale_2015(res.bsd, res.swi);
                 else
                     [res.zTOC_RCM.k, res.swi.C0i, res.swi.Fnonbioi] = benthic_test.RCM(res.bsd, res.swi);
-                 end
+                end
                 res = res.zTOC_RCM.calc(res.bsd,res.swi, res);
                 O2_demand_flux = -(sum(res.swi.Fnonbioi))*res.bsd.OC/((1-res.bsd.por)./res.bsd.por);
             end
@@ -435,10 +627,11 @@ classdef benthic_test
             res.zNH4 = benthic_zNH4(res.bsd, res.swi);
             res.zFe2 = benthic_zFe2(res.bsd, res.swi, Cox_total);
             res.zH2S = benthic_zH2S(res.bsd, res.swi);
-            res.zPO4_M = benthic_zPO4_M(res.bsd, res.swi);
-            res.zDIC = benthic_zDIC(res.bsd, res.swi);
-            res.zALK = benthic_zALK(res.bsd, res.swi);
-            
+            if(calc_P_DIC_ALK)
+                res.zPO4_M = benthic_zPO4_M(res.bsd, res.swi);
+                res.zDIC = benthic_zDIC(res.bsd, res.swi);
+                res.zALK = benthic_zALK(res.bsd, res.swi);
+            end
             % set gamma for Fe as fct of Cox and O20:
             BW_O2 = swi.O20 * 1000 *10^6;               % converst from mol/cm3 to mol/kg = mol/L (*1000), then express as mu (*10^6)
             % calculate gamma for fraction of Fe2 re-oxidation at zox, using Seb vd Velde's fit
@@ -447,15 +640,15 @@ classdef benthic_test
             c=1.45;
             x = log(Cox_total/BW_O2);
             gammaFe2_max = a*exp(-((x-b)^2)/(2*c^2));
-%            gammaFe2_max = 0.1;
+            % gammaFe2_max = 0.0;
             % save fractions up to this value in vector in case
             % Fe-calculation fails and I need to iteratively decrease gammaFe2
-            gammaFe2_v = [0:0.1:gammaFe2_max gammaFe2_max];    
+            gammaFe2_v = [0:0.1:gammaFe2_max gammaFe2_max];
             gammaFe2_v = fliplr(gammaFe2_v);
             % calculate gamma for Fe2 burial (mainly as pyrite), using Seb vd Velde's fit
             d=0.154 * 6;                                % because FFeOOh_t = 6 * FFeOOH_hr
             res.bsd.gammaFe_pp = (1-d*tanh(Cox_total/BW_O2));       % 1 - parameterization for DFe-efflux
-%            res.bsd.gammaFe_pp = 0.5;
+            %            res.bsd.gammaFe_pp = 0.5;
             
             
             % %     change zbio and gammaH2S depending on BW oxygenation:
@@ -464,131 +657,152 @@ classdef benthic_test
             % %                 bsd.gammaH2S = 0.95;    % fraction of H2S that is oxidised in anoxic sediments
             % %             end
             
-            % loop over gammaFe2: 
+            % loop over gammaFe2:
             % in case Fe-cycle is not mass-conserving gammaFe2 has to be smaller
             % this just happens for a few cases when zno3 < zbio << zfe3
             % (but I am not sure why) - calculation leads to zfe3 < zinf
             % but not all Fe3flux_in is used
             for(iter=1:length(gammaFe2_v))           % iteratively chose smaller gammaFe2
-                iter
+                %                iter
                 res.bsd.gammaFe2 = gammaFe2_v(iter);
-            if(res.swi.O20<=0.0)
-                res.zox=0.0;
-                res.flxzox = 0.0;
-                res.conczox = 0.0;
-                res.flxswiO2=0.0;
-                res.zxf=0.0;
-            else
-                res = res.zO2.calc(res.bsd, res.swi, res);
-            end
-            if(swi.Nitrogen)
-                res = res.zNO3.calc(res.bsd, res.swi, res);
-            else
-                res.zno3=res.zox;
-                %                res.zso4=res.zox;   % for test-case with just TOC & O2
-            end
-            if(swi.Iron)
-                % First solve iteratively for correct SWI [Fe3+]
-                Flux_FeIII0_in = 2;
-                fun=@(Fe3_conc_in) -res.zFeIII.calc_input(res.bsd, res.swi, res, Fe3_conc_in) - res.swi.Flux_FeIII0;   % NOTE: negative calc_input to transform the result to positive because the given flux at the SWI is positive here!
-                
-                % For starting point calculate SWI-concentration of Fe3+ from input flux
-                if(res.zno3 > res.bsd.zbio )
-                    % SWI-concentration of Fe3+ is not affected by Fe-reduction
-                    % -> use simple conversion - this should be close
-                    % enough to correct SWI-concentration
-                    res.swi.FeIII0= res.swi.Flux_FeIII0/((1-res.bsd.por)*res.bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
-                    test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
-                    % try zero flux at zinf and see if we have any FeIII left, also
-                    % calculate [FeIII] at zinf for advective loss
-                    [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2);
-                    if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried
-                        fun0 = 0.0;     % use the first guess for res.swi.FeIII0
-                        % FOR MASS BALANCE WITH cGENIE MAKE SURE THE
-                        % REMAINING INFLUX OF Fe3+ IS BURIED IN SEDIMENTS!!!
-                    else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
-                        fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
+                if(res.swi.O20<=0.0)
+                    res.zox=0.0;
+                    res.flxzox = 0.0;
+                    res.conczox = 0.0;
+                    res.flxswiO2=0.0;
+                    res.zxf=0.0;
+                else
+                    res = res.zO2.calc(res.bsd, res.swi, res);
+                end
+                if(swi.Nitrogen)
+                    if(res.swi.NO30<=0.0)
+                        res.zno3=res.zox;
+                        res.flxzno3 = 0.0;
+                        res.conczno3 = 0.0;
+                        res.flxswiNO3 = 0.0;
+                    else
+                        res = res.zNO3.calc(res.bsd, res.swi, res);
                     end
                 else
-                    % SWI-concentration of Fe3+ is affected by Fe-reduction
-                    % -> take biodiffusion and Fe-reduction into account
-                    res.swi.FeIII0 = res.zFeIII.calcConcentration(res.bsd, res.swi, res, res.swi.Flux_FeIII0);
-                    if(res.swi.FeIII0 < 0)
-                        % Either Case zno3 < zFe3 < zbio OR zno3 < zbio << zFe3 (= zinf) and calcConcentration() fails
-                        % use simple conversion and iterate from there
+                    res.zno3=res.zox;
+                    %                res.zso4=res.zox;   % for test-case with just TOC & O2
+                end
+                
+                if(swi.Iron)
+                    % First solve iteratively for correct SWI [Fe3+]
+                    Flux_FeIII0_in = 2;
+                    fun=@(Fe3_conc_in) -res.zFeIII.calc_input(res.bsd, res.swi, res, Fe3_conc_in) - res.swi.Flux_FeIII0;   % NOTE: negative calc_input to transform the result to positive because the given flux at the SWI is positive here!
+                    
+                    % For starting point calculate SWI-concentration of Fe3+ from input flux
+                    if(res.zno3 > res.bsd.zbio )
+                        % SWI-concentration of Fe3+ is not affected by Fe-reduction
+                        % -> use simple conversion - this should be close
+                        % enough to correct SWI-concentration
                         res.swi.FeIII0= res.swi.Flux_FeIII0/((1-res.bsd.por)*res.bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
-                        [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2);
-                        % check if calculated SWI-flux for calculated concentration and 'infinite' concentration 
-                        % is smaller than desired SWI-flux (i.e. check for res.swi.FeIII0 & 1e+6); 
-                        fun_FeIII00 = fun(1e-10);
-                        fun_FeIII0 = fun(res.swi.FeIII0);
-                        fun_FeIIIinf = fun(1e+6);
-                        % If yes: zfeIII = inf bc SWI-flux of fe3 won't increase anymore if SWI-conc. is increased
-                        % -> use first guess for fe3-flux
-%                        if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried
-                        if((fun_FeIII0 < 0) & (fun_FeIIIinf < 0))    % zbio < zfeIII < zinf --> use first guess for fe3-flux and assume the remainder is buried
-                            fun0 = 0.0;     % use the first guess for res.swi.FeIII0
-                        else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
-                            %                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
-                            fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
-                        end
-%                          fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
-                    else
-                        % try zero flux at zinf and see if we have any FeIII left
+                        %                    test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
+                        % try zero flux at zinf and see if we have any FeIII left, also
+                        % calculate [FeIII] at zinf for advective loss
                         [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2);
                         if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried
                             fun0 = 0.0;     % use the first guess for res.swi.FeIII0
+                            % FOR MASS BALANCE WITH cGENIE MAKE SURE THE
+                            % REMAINING INFLUX OF Fe3+ IS BURIED IN SEDIMENTS!!!
                         else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
-                        % check if calculated SWI-flux for calculated concentration and 'infinite' concentration 
-                        % is smaller than desired SWI-flux (i.e. check for res.swi.FeIII0 & 1e+6); 
-                        fun_FeIII00 = fun(1e-10);
-                        fun_FeIII0 = fun(res.swi.FeIII0);
-                        fun_FeIIIinf = fun(1e+6);
-                        % If yes: zfeIII = inf bc SWI-flux of fe3 won't increase anymore if SWI-conc. is increased
-                        % -> use first guess for fe3-flux
-                        if((fun_FeIII0 < 0) & (fun_FeIIIinf < 0))    % zbio < zfeIII < zinf --> no Fe2-reoxidation
-                        fun0 = 0;
-                        else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
-                            %                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
                             fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
                         end
-%                            fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
+                    else
+                        % SWI-concentration of Fe3+ is affected by Fe-reduction
+                        % -> take biodiffusion and Fe-reduction into account
+                        res.swi.FeIII0 = res.zFeIII.calcConcentration(res.bsd, res.swi, res, res.swi.Flux_FeIII0);
+                        if(res.swi.FeIII0 < 0)
+                            % Either Case zno3 < zFe3 < zbio OR zno3 < zbio << zFe3 (= zinf) and calcConcentration() fails
+                            % use simple conversion and iterate from there
+                            res.swi.FeIII0= res.swi.Flux_FeIII0/((1-res.bsd.por)*res.bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
+                            [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2);
+                            % check if calculated SWI-flux for calculated concentration and 'infinite' concentration
+                            % is smaller than desired SWI-flux (i.e. check for res.swi.FeIII0 & 1e+6);
+                            %                        fun_FeIII00 = fun(1e-10);
+                            fun_FeIII0 = fun(res.swi.FeIII0);
+                            %                         fun_FeIIIinf = fun(1e+6); % DH deleted this check 02.11.2020, problem converging if zfeIII = zinf???
+                            % If yes: zfeIII = inf bc SWI-flux of fe3 won't increase anymore if SWI-conc. is increased
+                            % -> use first guess for fe3-flux
+                            %                        if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried
+                            %                        if((fun_FeIII0 < 0) & (fun_FeIIIinf < 0))    % DH deleted the 2nd check 02.11.2020, problem converging if zfeIII = zinf???
+                            if((fun_FeIII0 < 0))% & (fun_FeIIIinf < 0))    % zbio < zfeIII < zinf --> use first guess for fe3-flux and assume the remainder is buried
+                                fun0 = 0.0;     % use the first guess for res.swi.FeIII0
+                            else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
+                                %                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
+                                fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
+                            end
+                            %                          fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
+                        else
+                            % try zero flux at zinf and see if we have any FeIII left
+                            [flxzfeIII, conczinf, flxswi,rtmp] = res.zFeIII.calcbc(res.bsd.zinf, res.bsd, res.swi, res, 2);
+                            if(conczinf >= 0)    % zfeIII >= zinf --> use first guess for fe3-flux and assume the remainder is buried
+                                fun0 = 0.0;     % use the first guess for res.swi.FeIII0
+                            else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
+                                % check if calculated SWI-flux for calculated concentration and 'infinite' concentration
+                                % is smaller than desired SWI-flux (i.e. check for res.swi.FeIII0 & 1e+6);
+                                %                        fun_FeIII00 = fun(1e-10);
+                                fun_FeIII0 = fun(res.swi.FeIII0);
+                                %                        fun_FeIIIinf = fun(1e+6);  % DH deleted this check 02.11.2020, problem converging if zfeIII = zinf???
+                                % If yes: zfeIII = inf bc SWI-flux of fe3 won't increase anymore if SWI-conc. is increased
+                                % -> use first guess for fe3-flux
+                                %                        if((fun_FeIII0 < 0) & (fun_FeIIIinf < 0))    % DH deleted the 2nd check 02.11.2020, problem converging if zfeIII = zinf???
+                                if((fun_FeIII0 < 0))    % zbio < zfeIII < zinf --> no Fe2-reoxidation
+                                    fun0 = 0;
+                                else    % zfeIII < zinf --> iteratively solve for correct Fe3-concentration
+                                    %                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
+                                    fun0 = fun_FeIII0; %fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
+                                end
+                                %                            fun0 = fun(res.swi.FeIII0);     % initial test with calculated SWI-concentration
+                            end
                         end
                     end
-                end
-                
-                if(abs(fun0) > res.bsd.tol_Fe3)  % initial guess above not good enough
                     
-                    if(fun0 > 0)    % Fe3+ concentration too high
-                        %                         test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 1e-10);
-                        %                         test1_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
-                        res.swi.FeIII0=fzero(fun,[1e-10, res.swi.FeIII0],res.bsd.fzerooptions_Fe3);    % NOTE: Find better way for lower boundary
-                    else    % Fe3+ concentration too low
-                        %                          test0_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
-                        %                          test1_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 0.5*res.swi.FeIII0);
-                        %                          test2_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 10*res.swi.FeIII0);
-                        %                          test3_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 1e+6);
-                        res.swi.FeIII0=fzero(fun,[res.swi.FeIII0, 1e+6],res.bsd.fzerooptions_Fe3);    % NOTE: Find better way for upper boundary - not sure if this works anyway (at least not for gammaFe2 >= 0.99)
+                    if(abs(fun0) > res.bsd.tol_Fe3)  % initial guess above not good enough
+                        
+                        if(fun0 > 0)    % Fe3+ concentration too high
+                                                     test0_flx = fun(1e-10);    % res.zFeIII.calc_input(res.bsd, res.swi, res, 1e-10);
+                                                     test1_flx = fun(res.swi.FeIII0);         % res.zFeIII.calc_input(res.bsd, res.swi, res, res.swi.FeIII0);
+                            res.swi.FeIII0=fzero(fun,[1e-10, res.swi.FeIII0],res.bsd.fzerooptions_Fe3);    % NOTE: Find better way for lower boundary
+                        else    % Fe3+ concentration too low
+                            %                                                   fun2=fun(2.0*res.swi.FeIII0);
+                            fun6 = fun(1);
+                            %                                                  test3_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 1e+6);
+                            %                                                  test4_flx = res.zFeIII.calc_input(res.bsd, res.swi, res, 1e+3);
+                            if(fun6<0)    % check if fun for upper and lower boundary both below 0 --> use lower gammaFe2 value!
+                                % do nothing just use first guess for res.swi.FeIII0
+                                % if not good enough reduce gammaFe2 in next iteration
+                                res.iter_fun6 =  res.iter_fun6+1;
+                            else
+                                res.swi.FeIII0=fzero(fun,[res.swi.FeIII0, 1.0],res.bsd.fzerooptions_Fe3);    % now just use 20% higher FeIII0 input
+                                % was until 02.12.2020  res.swi.FeIII0=fzero(fun,[res.swi.FeIII0, 1e+6],res.bsd.fzerooptions_Fe3);    % NOTE: Find better way for upper boundary - not sure if this works anyway (at least not for gammaFe2 >= 0.99)
+                            end
+                        end
                     end
-                end
-                res = res.zFeIII.calc(res.bsd, res.swi, res);
-                % check IF FeIII-flux_in is calculated or IF zfe3 = zinf
-                % otherwise simulate with gammaFe2 = 0   
-                if((abs(-res.flxswiFeIII-res.swi.Flux_FeIII0) < res.bsd.tol_Fe3) || (res.zfeIII == res.bsd.zinf))
-                   % all good
-                   break    % leave for-loop
-%                    res.flxswiFeIII
-%                    res.zfeIII
+                    res = res.zFeIII.calc(res.bsd, res.swi, res);
+                    % check IF FeIII-flux_in is calculated or IF zfe3 = zinf
+                    % otherwise simulate with gammaFe2 = 0
+                    if((abs(-res.flxswiFeIII-res.swi.Flux_FeIII0) < res.bsd.tol_Fe3) || (res.zfeIII == res.bsd.zinf))
+                        % all good
+                        break    % leave for-loop
+                        %                    res.flxswiFeIII
+                        %                    res.zfeIII
+                    else
+                        warning('SOMETHING WRONG WITH Fe-FLUXES!');
+                        % reduce re-oxidation of Fe2 , in next for loop
+                        
+                        if(iter==length(gammaFe2_v))     % does not work for gammaFe2_v = 0
+                            warning('FeIII calculation fails for gammaFe2_v = 0')
+                            res.iter_Fefail =  res.iter_Fefail+1;
+                        end
+                        
+                    end
                 else
-                    warning('SOMETHING WRONG WITH Fe-FLUXES!');
-%                     % no re-oxidation of Fe2 , in second for loop
-%                     res.bsd.gammaFe2 = 0.0;
-%                 	res = res.zFeIII.calc(res.bsd, res.swi, res);
+                    res.zfeIII = res.zno3;
+                    break    % leave for-loop
                 end
-            else
-                res.zfeIII = res.zno3;
-                break    % leave for-loop
-            end
             end
             
             res = res.zSO4.calc(res.bsd, res.swi, res);
@@ -600,61 +814,189 @@ classdef benthic_test
                 res = res.zFe2.calc(res.bsd, res.swi, res);
             end
             res = res.zH2S.calc(res.bsd, res.swi, res);
-            res = res.zPO4_M.calc(res.bsd, res.swi, res);
-            res = res.zDIC.calc(res.bsd, res.swi, res);
-            res = res.zALK.calc(res.bsd, res.swi, res);
-            toc;
+            if(calc_P_DIC_ALK)
+                res = res.zPO4_M.calc(res.bsd, res.swi, res);
+                res = res.zDIC.calc(res.bsd, res.swi, res);
+                res = res.zALK.calc(res.bsd, res.swi, res);
+            end
+            %            toc;
             
             %%%%% WRITE OUTPUT:
-            answ = res
-            if(swi.TwoG_OM_model)
-                % use fluxes to calculate burial efficiency and total Cox:
-                [F_TOC_swi, F_TOC1_swi] = res.zTOC.calcCflx(0, res.bsd, res.swi, res);
-                [F_TOC_inf, F_TOC1_inf] = res.zTOC.calcCflx(res.bsd.zinf, res.bsd, res.swi, res);
-                
-                [F_TOC_zox, F_TOC1_zox] = res.zTOC.calcCflx(res.zox, res.bsd, res.swi, res);
-                [F_TOC_zno3, F_TOC1_zno3] = res.zTOC.calcCflx(res.zno3, res.bsd, res.swi, res);
-                [F_TOC_zfe3, F_TOC1_zfe3] = res.zTOC.calcCflx(res.zfeIII, res.bsd, res.swi, res);
-                [F_TOC_zso4, F_TOC1_zso4] = res.zTOC.calcCflx(res.zso4, res.bsd, res.swi, res);
-                
-                fprintf('Fluxes at zinf %g \n',  F_TOC_inf);
-                fprintf('Fluxes at swi %g \n',  F_TOC_swi);
-                
-                fprintf('Burial efficiency of POC (in %%) %g \n',  F_TOC_inf/F_TOC_swi *100);
-                fprintf('\n');
-                fprintf('Total Cox (mol cm-2 yr-1) %e \n',  F_TOC_swi-F_TOC_inf);
-                fprintf('Aerobic Cox %e \n',  F_TOC_swi-F_TOC_zox);
-                fprintf('Denitrification Cox %e \n',  F_TOC_zox - F_TOC_zno3 );
-                fprintf('Fe-reduction Cox %e \n',  F_TOC_zno3 - F_TOC_zfe3);
-                fprintf('Sulfate reduction Cox %e \n',  F_TOC_zfe3-F_TOC_zso4);
-                
-            else
-                % use fluxes to calculate burial efficiency and total Cox:
-                [F_TOC_swi, F_TOC1_swi] = res.zTOC_RCM.calcCflx(0, res.bsd, res.swi, res);
-                [F_TOC_inf, F_TOC1_inf] = res.zTOC_RCM.calcCflx(res.bsd.zinf, res.bsd, res.swi, res);
-                
-                [F_TOC_zox, F_TOC1_zox] = res.zTOC_RCM.calcCflx(res.zox, res.bsd, res.swi, res);
-                [F_TOC_zno3, F_TOC1_zno3] = res.zTOC_RCM.calcCflx(res.zno3, res.bsd, res.swi, res);
-                [F_TOC_zfe3, F_TOC1_zfe3] = res.zTOC_RCM.calcCflx(res.zfeIII, res.bsd, res.swi, res);
-                [F_TOC_zso4, F_TOC1_zso4] = res.zTOC_RCM.calcCflx(res.zso4, res.bsd, res.swi, res);
-                
-                fprintf('Fluxes at zinf %g \n',  F_TOC_inf);
-                fprintf('Fluxes at swi %g \n',  F_TOC_swi);
-                fprintf('Burial efficiency of POC (in %%) %g \n',  F_TOC_inf/F_TOC_swi *100);
-                fprintf('\n');
-                fprintf('Total Cox (mol cm-2 yr-1) %e \n',  F_TOC_swi-F_TOC_inf);
-                fprintf('Aerobic Cox %e \n',  F_TOC_swi-F_TOC_zox);
-                fprintf('Denitrification Cox %e \n',  F_TOC_zox - F_TOC_zno3 );
-                fprintf('Fe-reduction Cox %e \n',  F_TOC_zno3 - F_TOC_zfe3);
-                fprintf('Sulfate reduction Cox %e \n',  F_TOC_zfe3-F_TOC_zso4);
-                
-                %             %%% WRITE EXACT FLUX
-                %             FO2_exact=res.zO2.calcFO2_exact(res.zox,res.bsd, res.swi, res);
-                %             fprintf('exact flxswiO2 flux (mol cm^{-2} yr^{-1}) %g \n',  FO2_exact);
-                
+            if(write_output)
+                answ = res
+                if(swi.TwoG_OM_model)
+                    % use fluxes to calculate burial efficiency and total Cox:
+                    [F_TOC_swi, F_TOC1_swi] = res.zTOC.calcCflx(0, res.bsd, res.swi, res);
+                    [F_TOC_inf, F_TOC1_inf] = res.zTOC.calcCflx(res.bsd.zinf, res.bsd, res.swi, res);
+                    
+                    [F_TOC_zox, F_TOC1_zox] = res.zTOC.calcCflx(res.zox, res.bsd, res.swi, res);
+                    [F_TOC_zno3, F_TOC1_zno3] = res.zTOC.calcCflx(res.zno3, res.bsd, res.swi, res);
+                    [F_TOC_zfe3, F_TOC1_zfe3] = res.zTOC.calcCflx(res.zfeIII, res.bsd, res.swi, res);
+                    [F_TOC_zso4, F_TOC1_zso4] = res.zTOC.calcCflx(res.zso4, res.bsd, res.swi, res);
+                    
+                    fprintf('Fluxes at zinf %g \n',  F_TOC_inf);
+                    fprintf('Fluxes at swi %g \n',  F_TOC_swi);
+                    
+                    fprintf('Burial efficiency of POC (in %%) %g \n',  F_TOC_inf/F_TOC_swi *100);
+                    fprintf('\n');
+                    fprintf('Total Cox (mol cm-2 yr-1) %e \n',  F_TOC_swi-F_TOC_inf);
+                    fprintf('Aerobic Cox %e \n',  F_TOC_swi-F_TOC_zox);
+                    fprintf('Denitrification Cox %e \n',  F_TOC_zox - F_TOC_zno3 );
+                    fprintf('Fe-reduction Cox %e \n',  F_TOC_zno3 - F_TOC_zfe3);
+                    fprintf('Sulfate reduction Cox %e \n',  F_TOC_zfe3-F_TOC_zso4);
+                    
+                else
+                    % use fluxes to calculate burial efficiency and total Cox:
+                    [F_TOC_swi, F_TOC1_swi] = res.zTOC_RCM.calcCflx(0, res.bsd, res.swi, res);
+                    [F_TOC_inf, F_TOC1_inf] = res.zTOC_RCM.calcCflx(res.bsd.zinf, res.bsd, res.swi, res);
+                    
+                    [F_TOC_zox, F_TOC1_zox] = res.zTOC_RCM.calcCflx(res.zox, res.bsd, res.swi, res);
+                    [F_TOC_zno3, F_TOC1_zno3] = res.zTOC_RCM.calcCflx(res.zno3, res.bsd, res.swi, res);
+                    [F_TOC_zfe3, F_TOC1_zfe3] = res.zTOC_RCM.calcCflx(res.zfeIII, res.bsd, res.swi, res);
+                    [F_TOC_zso4, F_TOC1_zso4] = res.zTOC_RCM.calcCflx(res.zso4, res.bsd, res.swi, res);
+                    
+                    fprintf('Fluxes at zinf %g \n',  F_TOC_inf);
+                    fprintf('Fluxes at swi %g \n',  F_TOC_swi);
+                    fprintf('Burial efficiency of POC (in %%) %g \n',  F_TOC_inf/F_TOC_swi *100);
+                    fprintf('\n');
+                    fprintf('Total Cox (mol cm-2 yr-1) %e \n',  F_TOC_swi-F_TOC_inf);
+                    fprintf('Aerobic Cox %e \n',  F_TOC_swi-F_TOC_zox);
+                    fprintf('Denitrification Cox %e \n',  F_TOC_zox - F_TOC_zno3 );
+                    fprintf('Fe-reduction Cox %e \n',  F_TOC_zno3 - F_TOC_zfe3);
+                    fprintf('Sulfate reduction Cox %e \n',  F_TOC_zfe3-F_TOC_zso4);
+                    
+                    %             %%% WRITE EXACT FLUX
+                    %             FO2_exact=res.zO2.calcFO2_exact(res.zox,res.bsd, res.swi, res);
+                    %             fprintf('exact flxswiO2 flux (mol cm^{-2} yr^{-1}) %g \n',  FO2_exact);
+                    
+                end
             end
         end
+
+     	function plot_Fe_SA(POC_flux, O20, Cox_rate_out, Penetration_out, Flux_Fe2_Dale_units, nG)
+            %% plot various results for the Fe analysis
+            
+            str_date = datestr(now,'ddmmyy');
+            
+            exp_name = '30cm_with_SMIsink';
+            
+            %% plot FFe efflux
+            x_axis = [0 14];
+            y_axis = [0 200];
+            
+            % plot FFe2 vs BW O2
+            fig1 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(POC_flux));
+            hold on
+            for i=1:length(POC_flux)
+                plot(O20, Flux_Fe2_Dale_units(i,:),'x-','Color',color(i,:))
+            end
+            %            ylim(y_axis)
+            ylabel('JDFe (\mumol m^{-2} d^{-1})');
+            xlabel('[O_2]_{BW} (\muM)');
+            
+            print(fig1, '-depsc2', ['95_Flux_JFFe2_vs_O2_OMEN_' num2str(nG) 'G_' str_date '_' exp_name '.eps']);
+            
+            % plot FFe2 vs Cox
+            fig2 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Flux_Fe2_Dale_units(:,j),'x-','Color',color(j,:))
+            end
+            xlim(x_axis)
+            %            ylim(y_axis)
+            ylabel('JDFe (\mumol m^{-2} d^{-1})');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+            
+            print(fig2, '-depsc2', ['95_Flux_JFFe2_vs_Cox_' num2str(nG) 'G_' str_date '_' exp_name '.eps']);
+            
+            %% Plot fraction of metabolic pathways
+            y_axis = [0 100];
+            % plot fraction aerobic-reduction vs Cox
+            % plot FFe2 vs Cox
+            fig3 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_aerobic(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
+            end
+            ylabel('Fract. of aerobic-reduction (%)');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+ %             xlim(x_axis)
+            ylim(y_axis)
+            print(fig3, '-depsc2', ['96_Flux_Frac_aerobic_red_vs_Cox_' num2str(nG) 'G_' str_date '_' exp_name '.eps']);
+            
+            % plot fraction Fe-reduction vs Cox
+            % plot FFe2 vs Cox
+            fig4 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_denitr(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
+            end
+            ylabel('Fract. of denitrification (%)');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+ %             xlim(x_axis)
+            ylim(y_axis)
+            print(fig4, '-depsc2', ['96_Flux_Frac_denitrif_vs_Cox_' num2str(nG) 'G_' str_date '_' exp_name '.eps']);
+            
+            % plot fraction Fe-reduction vs Cox
+            fig5 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_FeIII(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
+            end
+            ylabel('Fract. of Fe-reduction (%)');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+ %             xlim(x_axis)
+            %            ylim([0 80])
+            print(fig5, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_' num2str(nG) 'G_' str_date '_' exp_name '_zoom.eps']);
+            
+            % plot fraction Fe-reduction vs Cox
+            % plot FFe2 vs Cox
+            fig51 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_FeIII(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
+            end
+            ylabel('Fract. of Fe-reduction (%)');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+            ylim(y_axis)
+            print(fig51, '-depsc2', ['96_Flux_Frac_Fe2_red_vs_Cox_' num2str(nG) 'G_' str_date '_' exp_name '.eps']);
+            
+            % plot fraction SO4-reduction vs Cox
+            fig6 = figure('Renderer', 'painters', 'Position', [10 10 600 300]);
+            set(0,'defaultLineLineWidth', 2)
+            set(0,'DefaultAxesFontSize',12)
+            color = parula(length(O20));
+            hold on
+            for j=1:length(O20)
+                plot(Cox_rate_out.Cox_total(:,j), Cox_rate_out.Cox_sulfate(:,j)./Cox_rate_out.Cox_total(:,j)*100,'x-','Color',color(j,:))
+            end
+            ylabel('Fract. of SO_4-reduction (%)');
+            xlabel('[Cox] (mmol m^{-2} d^{-1})');
+            ylim(y_axis)
+ %           xlim(x_axis)
+            print(fig6, '-depsc2', ['96_Flux_Frac_SO4_red_vs_Cox_' num2str(nG) 'G_' str_date '_' exp_name '.eps']);
+            
+        end
         
+
         
         function plot_column(res, debug, swi, str_date)
             % plot single sediment column vs depth
@@ -1473,7 +1815,7 @@ classdef benthic_test
             
             
             if(swi.Test_Dale_14G)
-            
+                
                 k(1)= 1e-10;
                 for i=2:13
                     j = -12+i;
@@ -1481,7 +1823,7 @@ classdef benthic_test
                 end
                 k(14)= 100;
                 %                k(1:10) = 0.08;    % in case we want to degrade all
-
+                
                 F(1) = 0.021746;
                 F(2) = 0.00725275;
                 F(3) = 0.0096717;
@@ -1495,9 +1837,9 @@ classdef benthic_test
                 F(11) = 0.0967046;
                 F(12) = 0.12881;
                 F(13) = 0.169822;
-                F(14) = 0.314677;                           
+                F(14) = 0.314677;
             else
-                                emin = -15; % as in Dale ea. '15: -10;
+                emin = -15; % as in Dale ea. '15: -10;
                 emax = -log10(swi.p_a)+2;  % as in Dale ea. '15: 2    % upper k limit for k-bins of multi-G approximation
                 if emin >= emax;error('emin >= emax, this cannot be!');end
                 %                 if emax >= log10(200);emax=log10(200);end
@@ -1520,7 +1862,7 @@ classdef benthic_test
                 k(G)=kk(1:swi.nG-2)+(kk(2:swi.nG-1)-kk(1:swi.nG-2))/2;
                 F(F<=eps)=eps;
             end
-
+            
             if abs(sum(F)-1) > 0.0001;warning('F~=1!!');end
             
             % use the input flux of 6.2 mmol m-2 d-1 from Dale

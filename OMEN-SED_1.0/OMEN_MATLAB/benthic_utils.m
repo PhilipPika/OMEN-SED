@@ -31,7 +31,11 @@ classdef benthic_utils
             d     = (dEdx_l.*F_r     -   E_l.*dFdx_r)./blden;
             f     = (E_l.*(dGdx_l-dGdx_r+Db) + dEdx_l.*(-G_l+G_r - Vb))./blden;
             
-            %
+            % check if b is NaN and terms in numerator are equal
+            % set b = 0
+            if(isnan(b) & (dFdx_l== dFdx_r) & (F_r==F_l))
+                b = 0.0;
+            end
         end
 
         function [Et, Ft, Gt, dEtdx, dFtdx, dGtdx] = xformsoln(E, F, G, dEdx, dFdx, dGdx, ...

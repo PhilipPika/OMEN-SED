@@ -32,13 +32,15 @@ classdef benthic_zTOC_RCM < handle
             rTOC_RCM.b1=(bsd.w+sqrt(bsd.w.^2+4.*obj.DC1.*obj.k))./(2.*obj.DC1);
             rTOC_RCM.a2=(-obj.k./bsd.w);
          	% calculate bioturbated SWI
-            % comment C0i calculation for calculating observed profiles &
-            % sensitivity analysis (as we have concentrations C0i for this)
+            % comment C0i calculation when we know concentrations C0i (i.e.
+            % for calculating observed profiles & sensitivity analysis, and
+            % now global analysis of degradation pathways)
+            if(swi.flux) % tranlate fux to concentration!
             swi.C0i = (swi.Fnonbioi.*(-rTOC_RCM.a1.*exp(rTOC_RCM.a1*bsd.zbio)+rTOC_RCM.b1.*exp(rTOC_RCM.b1*bsd.zbio)))./(-obj.DC1.*rTOC_RCM.b1.*rTOC_RCM.a1.*exp(rTOC_RCM.b1.*bsd.zbio) + obj.DC1.*rTOC_RCM.b1.*rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio) + ...
                 obj.DC1.*rTOC_RCM.b1.*rTOC_RCM.a1.*bsd.por.*exp(rTOC_RCM.b1.*bsd.zbio) - obj.DC1.*rTOC_RCM.b1.*rTOC_RCM.a1.*bsd.por.*exp(rTOC_RCM.a1.*bsd.zbio) - bsd.w.*rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio) + bsd.w.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio) + ...
                 bsd.w.*bsd.por.*rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio) - bsd.w.*bsd.por.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio));
             res.swi.C0i = swi.C0i;
-
+            end
             rTOC_RCM.A1 =-(swi.C0i.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio))./(rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio)-rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio)+bsd.tol_const);
             rTOC_RCM.A2 =(rTOC_RCM.A1.*(exp(rTOC_RCM.a1.*bsd.zbio)-exp(rTOC_RCM.b1.*bsd.zbio))+swi.C0i.*exp(rTOC_RCM.b1.*bsd.zbio))./(exp(rTOC_RCM.a2.*bsd.zbio)+bsd.tol_const);
             Names = fieldnames(rTOC_RCM);
@@ -216,8 +218,14 @@ classdef benthic_zTOC_RCM < handle
             
             b2 = bsd.w./Dtemp;
             f = exp(z.*b2);
-            dfdz = b2.*exp(z.*b2);
-            
+            dfdz = b2.*exp(z.*b2);            
+            if(isinf(f))
+                f = realmax;
+%            f
+            end
+            if(isinf(dfdz))
+                dfdz = realmax;
+            end
             %pfac=1./bsd.por;   % assume org matter already .*(1-bsd.por)
             pfac = 1;          % in fact, already has (1-por)/por
             
@@ -354,6 +362,8 @@ classdef benthic_zTOC_RCM < handle
             % 2) wholly within non-bio     layer:    (0=) calcReac_l1(zbio, zbio) +   calcReac_l2(zU, zL)
             % 3) crossing zbio                       calcRead_l1(zU,zbio)   +       calcReac_l2(zbio, zL)
             
+            L1=obj.calcReac_l1(min(zU,bsd.zbio), min(zL,bsd.zbio), reac1, bsd, swi, res);
+            L2=obj.calcReac_l2(max(zU,bsd.zbio), max(zL, bsd.zbio), reac1, bsd, swi, res);
             FReac=obj.calcReac_l1(min(zU,bsd.zbio), min(zL,bsd.zbio), reac1, bsd, swi, res) ...
                 + obj.calcReac_l2(max(zU,bsd.zbio), max(zL, bsd.zbio), reac1, bsd, swi, res);
             

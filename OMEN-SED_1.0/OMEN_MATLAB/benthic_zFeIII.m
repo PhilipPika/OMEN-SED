@@ -49,8 +49,18 @@ classdef benthic_zFeIII
                 fun=@(zfeIII) obj.calcbc(zfeIII,bsd,swi,r,1);   % FeIII consumption from Fe2 from below zfeIII:  - obj.calcFFeIII(zfeIII,bsd, swi, r);
 %                fun=@(zfeIII) obj.calcbc(zfeIII,bsd,swi,r,1) + obj.calcFFeIII(zfeIII,bsd, swi, r);   % Here, include FeIII consumption from oxidation of H2S from below zfeIII:  - obj.calcFFeIII(zfeIII,bsd, swi, r);
 
-                %             % try zero flux at zinf and see if we have any FeIII left
-                %             [flxzfeIII, conczinf, flxswi,rtmp] = obj.calcbc(bsd.zinf, bsd, swi, r, 2);
+            % Test for enough FeIII at zno3
+            funzno3 = fun(r.zno3); % >=0 for not enough FeIII avalable as this is a return flux
+            % check that fzero work, i.e. not-NaN for upper boundary (for
+            % very high sedrate flux at zinf = NaN, in that use lower upper
+            % boundary to finf zfeIII
+            upper_bound = bsd.zinf;
+            fun_upper = fun(upper_bound); % >= 0 for not enough FeIII avalable as this is a return flux
+            while(isnan(fun_upper))
+                upper_bound = upper_bound - 5;     
+                fun_upper = fun(upper_bound); % >= 0 for not enough FeIII avalable as this is a return flux
+            end
+
                 if bsd.usescalarcode
                     if conczinf >=0
                         r.zfeIII = bsd.zinf;
@@ -60,7 +70,11 @@ classdef benthic_zFeIII
                         conczinf = 0.0;
                         [flxzfeIII, conczno3, flxswi,rtmp] = obj.calcbc(r.zno3, bsd, swi, r, 1);
                         %                        r.zfeIII=fzero(fun,[max(r.zno3, 1e-10), bsd.zbio],bsd.fzerooptions);    % Fe- reduction only in bioturbated zone assume Fe-reduction occurs just in bioturbated layer
-                        r.zfeIII=fzero(fun,[max(r.zno3, 1e-10), bsd.zinf],bsd.fzerooptions);    % use this when diffusion <> 0, without diffusion zinf does not work as fewer int. const. are used in the lowest layer
+%                         if(funzno3<0 & fun_upper<0)
+%                             r.zfeIII= bsd.zinf;
+%                         else
+                            r.zfeIII=fzero(fun,[max(r.zno3, 1e-10), upper_bound],bsd.fzerooptions);    % use this when diffusion <> 0, without diffusion zinf does not work as fewer int. const. are used in the lowest layer
+%                        end
                     end
                 else  % vectorized version
                     bctype = (conczinf < 0)*1 + (conczfeIII>=0)*2;
