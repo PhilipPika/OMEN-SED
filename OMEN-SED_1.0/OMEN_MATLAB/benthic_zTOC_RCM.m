@@ -43,6 +43,16 @@ classdef benthic_zTOC_RCM < handle
             end
             rTOC_RCM.A1 =-(swi.C0i.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio))./(rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio)-rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio)+bsd.tol_const);
             rTOC_RCM.A2 =(rTOC_RCM.A1.*(exp(rTOC_RCM.a1.*bsd.zbio)-exp(rTOC_RCM.b1.*bsd.zbio))+swi.C0i.*exp(rTOC_RCM.b1.*bsd.zbio))./(exp(rTOC_RCM.a2.*bsd.zbio)+bsd.tol_const);
+%             A1_mine = rTOC_RCM.A1;
+%             A2_mine = rTOC_RCM.A2;
+%             k_mine = obj.k;
+%             a1_mine = rTOC_RCM.a1;
+%             b1_mine = rTOC_RCM.b1;
+%         	save(['k_mine.mat'] , 'k_mine')
+%         	save(['a1_mine.mat'] , 'a1_mine')
+%         	save(['b1_mine.mat'] , 'b1_mine')
+%         	save(['A1_mine.mat'] , 'A1_mine')
+%         	save(['A2_mine.mat'] , 'A2_mine')
             Names = fieldnames(rTOC_RCM);
             for i = 1:size(Names,1)
                 %                 if sum(isnan(rTOC_RCM.(Names{i}))==1) > 0 %
@@ -362,8 +372,6 @@ classdef benthic_zTOC_RCM < handle
             % 2) wholly within non-bio     layer:    (0=) calcReac_l1(zbio, zbio) +   calcReac_l2(zU, zL)
             % 3) crossing zbio                       calcRead_l1(zU,zbio)   +       calcReac_l2(zbio, zL)
             
-            L1=obj.calcReac_l1(min(zU,bsd.zbio), min(zL,bsd.zbio), reac1, bsd, swi, res);
-            L2=obj.calcReac_l2(max(zU,bsd.zbio), max(zL, bsd.zbio), reac1, bsd, swi, res);
             FReac=obj.calcReac_l1(min(zU,bsd.zbio), min(zL,bsd.zbio), reac1, bsd, swi, res) ...
                 + obj.calcReac_l2(max(zU,bsd.zbio), max(zL, bsd.zbio), reac1, bsd, swi, res);
             
@@ -378,7 +386,6 @@ classdef benthic_zTOC_RCM < handle
             %             for G = 1:swi.nG
             reacf1=res.zTOC_RCM.k.*reac1;
             % %             reacf2=res.zTOC_RCM.k2.*reac2;
-            
             FReac1 = sum(...
                 -reacf1.*(r.A1.*(exp(r.a1.*zU).*r.b1 - exp(r.b1.*zU).*r.a1 - exp(r.a1.*zL).*r.b1 + exp(r.b1.*zL).*r.a1)...
                 +res.swi.C0i.*exp(r.b1.*zU).*r.a1 -res.swi.C0i.*exp(r.b1.*zL).*r.a1)./(r.a1.*r.b1)...
