@@ -41,18 +41,18 @@ classdef benthic_zTOC_RCM < handle
                 bsd.w.*bsd.por.*rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio) - bsd.w.*bsd.por.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio));
             res.swi.C0i = swi.C0i;
             end
-            rTOC_RCM.A1 =-(swi.C0i.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio))./(rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio)-rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio)+bsd.tol_const);
-            rTOC_RCM.A2 =(rTOC_RCM.A1.*(exp(rTOC_RCM.a1.*bsd.zbio)-exp(rTOC_RCM.b1.*bsd.zbio))+swi.C0i.*exp(rTOC_RCM.b1.*bsd.zbio))./(exp(rTOC_RCM.a2.*bsd.zbio)+bsd.tol_const);
-%             A1_mine = rTOC_RCM.A1;
-%             A2_mine = rTOC_RCM.A2;
-%             k_mine = obj.k;
-%             a1_mine = rTOC_RCM.a1;
-%             b1_mine = rTOC_RCM.b1;
-%         	save(['k_mine.mat'] , 'k_mine')
-%         	save(['a1_mine.mat'] , 'a1_mine')
-%         	save(['b1_mine.mat'] , 'b1_mine')
-%         	save(['A1_mine.mat'] , 'A1_mine')
-%         	save(['A2_mine.mat'] , 'A2_mine')
+            if(swi.IntConst_GMD)
+                rTOC_RCM.A1 =-(swi.C0i.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio))./(rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio)-rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio)+bsd.tol_const);
+                rTOC_RCM.B1 = swi.C0i-rTOC_RCM.A1;
+                rTOC_RCM.A2 =(rTOC_RCM.A1.*(exp(rTOC_RCM.a1.*bsd.zbio)-exp(rTOC_RCM.b1.*bsd.zbio))+swi.C0i.*exp(rTOC_RCM.b1.*bsd.zbio))./(exp(rTOC_RCM.a2.*bsd.zbio)+bsd.tol_const);
+            else
+%                B1_DH = -(C0i.*a1_DH.*exp(a1_DH.*zbio))./(-a1_DH.*exp(a1_DH.*zbio) + b1_DH.*exp(b1_DH.*zbio));
+                rTOC_RCM.B1 = -(swi.C0i.*rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio))./(-rTOC_RCM.a1.*exp(rTOC_RCM.a1.*bsd.zbio) + rTOC_RCM.b1.*exp(rTOC_RCM.b1.*bsd.zbio));
+                rTOC_RCM.A1 = swi.C0i-rTOC_RCM.B1;
+
+                rTOC_RCM.A2 = rTOC_RCM.A1.*exp(rTOC_RCM.a1.*bsd.zbio) + rTOC_RCM.B1.*exp(rTOC_RCM.b1.*bsd.zbio);
+            end
+            
             Names = fieldnames(rTOC_RCM);
             for i = 1:size(Names,1)
                 %                 if sum(isnan(rTOC_RCM.(Names{i}))==1) > 0 %
@@ -131,17 +131,16 @@ classdef benthic_zTOC_RCM < handle
             % Calculate concentration at depth z from solution
             rTOC_RCM = r.rTOC_RCM;
             if(z<=bsd.zbio)
-                C1=rTOC_RCM.A1.*(exp(rTOC_RCM.a1.*z)-exp(rTOC_RCM.b1.*z))+swi.C0i.*exp(rTOC_RCM.b1.*z);
-                % %                 C2=rTOC_RCM.A12.*(exp(rTOC_RCM.a12.*z)-exp(rTOC_RCM.b12.*z))+swi.C02.*exp(rTOC_RCM.b12.*z);
+%             Commented is the 1. GMD version -- this has been changed (18.12.2020)
+%             so 2 Int Const. A & B are always used to facilitate easy switch to other OM degradation model
+%                C1=rTOC_RCM.A1.*(exp(rTOC_RCM.a1.*z)-exp(rTOC_RCM.b1.*z))+swi.C0i.*exp(rTOC_RCM.b1.*z);
+                C1=rTOC_RCM.A1.*exp(rTOC_RCM.a1.*z) + rTOC_RCM.B1.*exp(rTOC_RCM.b1.*z);
                 
-            else
-                
-                C1=rTOC_RCM.A2.*exp(rTOC_RCM.a2.*z);
-                % %                 C2=rTOC_RCM.A22.*exp(rTOC_RCM.a22.*z);
-                
+            else                
+                C1=rTOC_RCM.A2.*exp(rTOC_RCM.a2.*z);                
             end
             
-            C = sum(C1);% + C2;
+            C = nansum(C1);% + C2;
         end
         
         function [Cflx, C1flx] = calcCflx(obj, z, bsd, swi, r)
@@ -150,19 +149,21 @@ classdef benthic_zTOC_RCM < handle
             [C, C1] = obj.calcC(z,bsd,swi,r);
             if(z<bsd.zbio)
                 
-                dC1dz =  rTOC_RCM.A1.*(rTOC_RCM.a1.*exp(rTOC_RCM.a1.*z)-rTOC_RCM.b1.*exp(rTOC_RCM.b1.*z))+swi.C0i.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*z);
+%          Commented is the 1. GMD version -- this has been changed (18.12.2020)
+%             so 2 Int Const. A & B are always used to facilitate easy switch to other OM degradation model
+%                dC1dz =  rTOC_RCM.A1.*(rTOC_RCM.a1.*exp(rTOC_RCM.a1.*z)-rTOC_RCM.b1.*exp(rTOC_RCM.b1.*z))+swi.C0i.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*z);
+                dC1dz =  rTOC_RCM.A1.*rTOC_RCM.a1.*exp(rTOC_RCM.a1.*z) + rTOC_RCM.B1.*rTOC_RCM.b1.*exp(rTOC_RCM.b1.*z);
                 C1flx = - (1-bsd.por).*(-obj.DC1.*dC1dz + bsd.w.*C1);
-                % %                 dC2dz =  rTOC_RCM.A12.*(rTOC_RCM.a12.*exp(rTOC_RCM.a12.*z)-rTOC_RCM.b12.*exp(rTOC_RCM.b12.*z))+swi.C02.*rTOC_RCM.b12.*exp(rTOC_RCM.b12.*z);
-                % %                 C2flx = - (1-bsd.por).*(-obj.DC1.*dC2dz + bsd.w.*C2);
                 
             else
                 
                 C1flx = - (1-bsd.por).*bsd.w.*C1;
-                % %                 C2flx = - (1-bsd.por).*bsd.w.*C2;
                 
             end
             
-            Cflx = sum(C1flx);% + C2flx;
+%             The was the 1. GMD version -- this has been changed (18.12.2020)
+%            Cflx = sum(C1flx);% + C2flx;
+            Cflx = nansum(C1flx);% + C2flx;
         end
         
         function [e, dedz, f, dfdz, g, dgdz] ...
@@ -188,27 +189,29 @@ classdef benthic_zTOC_RCM < handle
             pfac = 1;          % in fact, already has (1-por)/por
             
             PhiI1   =-pfac.*obj.k.*(reac1).*r.A1./(Dtemp.*r.a1.^2-bsd.w.*r.a1-ktemp);
-            PhiII1  = pfac.*obj.k.*(reac1).*r.A1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp);
-            PhiIII1 =-pfac.*obj.k.*(reac1).*swi.C0i./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp);
-            % %             PhiI2   =-pfac.*obj.k2.*(reac2).*r.A12./(Dtemp.*r.a12.^2-bsd.w.*r.a12-ktemp);
-            % %             PhiII2  = pfac.*obj.k2.*(reac2).*r.A12./(Dtemp.*r.b12.^2-bsd.w.*r.b12-ktemp);
-            % %             PhiIII2 =-pfac.*obj.k2.*(reac2).*swi.C02./(Dtemp.*r.b12.^2-bsd.w.*r.b12-ktemp);
+            PhiII1  = -pfac.*obj.k.*(reac1).*r.B1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp);
+%            PhiII1  = pfac.*obj.k.*(reac1).*r.A1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp);   % This was the 1. GMD version -- this has been changed (18.12.2020)
+%            PhiIII1 =-pfac.*obj.k.*(reac1).*swi.C0i./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp);   % This was the 1. GMD version -- this has been changed (18.12.2020)
+
             
             % IF CONDITION TO AVOID NAN
-            PhiI1(isfinite(PhiI1)~=1) = bsd.tol_const;
-            PhiII1(isfinite(PhiI1)~=1) = bsd.tol_const;
-            PhiIII1(isfinite(PhiI1)~=1) = bsd.tol_const;
             if(isfinite(PhiI1)~=1)
                 warning('Phi is not finite!!!');
             end
+            PhiI1(isfinite(PhiI1)~=1) = bsd.tol_const;
+            PhiII1(isfinite(PhiI1)~=1) = bsd.tol_const;
+%             PhiIII1(isfinite(PhiI1)~=1) = bsd.tol_const;
+
             ea11z = exp(r.a1.*z);
             eb11z = exp(r.b1.*z);
             % %             ea12z = exp(r.a12.*z);
             % %             eb12z = exp(r.b12.*z);
             
-            g =  sum(PhiI1.*ea11z + PhiII1.*eb11z + PhiIII1.*eb11z);
-            
-            dgdz = sum(PhiI1.*r.a1.*ea11z + PhiII1.*r.b1.*eb11z + PhiIII1.*r.b1.*eb11z);
+            g =  nansum(PhiI1.*ea11z + PhiII1.*eb11z);
+%          	g =  sum(PhiI1.*ea11z + PhiII1.*eb11z + PhiIII1.*eb11z); % This was the 1. GMD version -- this has been changed (18.12.2020)
+
+            dgdz = nansum(PhiI1.*r.a1.*ea11z + PhiII1.*r.b1.*eb11z);
+%            dgdz = sum(PhiI1.*r.a1.*ea11z + PhiII1.*r.b1.*eb11z + PhiIII1.*r.b1.*eb11z);   % This was the 1. GMD version -- this has been changed (18.12.2020)
             
             
         end
@@ -241,8 +244,8 @@ classdef benthic_zTOC_RCM < handle
             
             PhiI1 = -pfac.*obj.k.*(reac1).*r.A2./(Dtemp.*r.a2.^2-bsd.w.*r.a2-ktemp);
             % %             PhiI2(G) = -pfac.*obj.k2.*(reac2).*r.A22./(Dtemp.*r.a22.^2-bsd.w.*r.a22-ktemp);
-            g = sum(PhiI1.*exp(r.a2.*z));
-            dgdz = sum(PhiI1.*r.a2.*exp(r.a2.*z));
+            g = nansum(PhiI1.*exp(r.a2.*z));
+            dgdz = nansum(PhiI1.*r.a2.*exp(r.a2.*z));
             
             
         end
@@ -385,14 +388,17 @@ classdef benthic_zTOC_RCM < handle
             r = res.rTOC_RCM;
             %             for G = 1:swi.nG
             reacf1=res.zTOC_RCM.k.*reac1;
-            % %             reacf2=res.zTOC_RCM.k2.*reac2;
-            FReac1 = sum(...
-                -reacf1.*(r.A1.*(exp(r.a1.*zU).*r.b1 - exp(r.b1.*zU).*r.a1 - exp(r.a1.*zL).*r.b1 + exp(r.b1.*zL).*r.a1)...
-                +res.swi.C0i.*exp(r.b1.*zU).*r.a1 -res.swi.C0i.*exp(r.b1.*zL).*r.a1)./(r.a1.*r.b1)...
+            
+            FReac1 = nansum(...
+                -reacf1.*( (r.A1./r.a1).* (exp(r.a1.*zU) - exp(r.a1.*zL))...
+                          +(r.B1./r.b1).* (exp(r.b1.*zU) - exp(r.b1.*zL)) )...
                 );
-            % % -reacf2.*(r.A12.*(exp(r.a12.*zU).*r.b12 - exp(r.b12.*zU).*r.a12 - exp(r.a12.*zL).*r.b12 + exp(r.b12.*zL).*r.a12) ...
-            % % +swi.C02.*exp(r.b12.*zU).*r.a12 -swi.C02.*exp(r.b12.*zL).*r.a12)./(r.a12.*r.b12);
-            %             end
+            
+        % The below was the 1. GMD version -- this has been changed (18.12.2020)
+%             FReac1 = sum(...
+%                 -reacf1.*(r.A1.*(exp(r.a1.*zU).*r.b1 - exp(r.b1.*zU).*r.a1 - exp(r.a1.*zL).*r.b1 + exp(r.b1.*zL).*r.a1)...
+%                 +res.swi.C0i.*exp(r.b1.*zU).*r.a1 -res.swi.C0i.*exp(r.b1.*zL).*r.a1)./(r.a1.*r.b1)...
+%                 );
         end
         
         function FReac2 = calcReac_l2(obj, zU, zL, reac1, bsd, swi, res)
@@ -403,7 +409,7 @@ classdef benthic_zTOC_RCM < handle
             
             reacf1=res.zTOC_RCM.k.*reac1;
             %             reacf2=res.zTOC_RCM.k2.*reac2;
-            FReac2= sum(-reacf1.*r.A2.*(exp(r.a2.*zU) - exp(r.a2.*zL))./r.a2);
+            FReac2= nansum(-reacf1.*r.A2.*(exp(r.a2.*zU) - exp(r.a2.*zL))./r.a2);
             % %                 -reacf2.*r.A22.*(exp(r.a22.*zU) - exp(r.a22.*zL))./r.a22;
             %             end
         end
@@ -427,31 +433,34 @@ classdef benthic_zTOC_RCM < handle
         end
         
         function FOM1 = calcOM_l1(obj, zU, zL, reac1, bsd, swi, res)
-            % Integral of reacted organic matter, zU and zL within layer 1 (bioturbated)
+            % Integral of organic matter between zU and zL within layer 1 (bioturbated)
             
             r = res.rTOC_RCM;
             reacf1=reac1;
             %             reacf2=reac2;
             
-            FOM1 = sum(...
-                -reacf1.*(r.A1.*(exp(r.a1.*zU).*r.b1 - exp(r.b1.*zU).*r.a1 - exp(r.a1.*zL).*r.b1 + exp(r.b1.*zL).*r.a1)...
-                +swi.C0i.*exp(r.b1.*zU).*r.a1 -swi.C0i.*exp(r.b1.*zL).*r.a1)./(r.a1.*r.b1)...
+            FOM1 = nansum(...
+                -reacf1.*( (r.A1./r.a1).* (exp(r.a1.*zU) - exp(r.a1.*zL))...
+                          +(r.B1./r.b1).* (exp(r.b1.*zU) - exp(r.b1.*zL)) )...
                 );
-            % %                 -reacf2.*(r.A12.*(exp(r.a12.*zU).*r.b12 - exp(r.b12.*zU).*r.a12 - exp(r.a12.*zL).*r.b12 + exp(r.b12.*zL).*r.a12) ...
-            % %                 +swi.C02.*exp(r.b12.*zU).*r.a12 -swi.C02.*exp(r.b12.*zL).*r.a12)./(r.a12.*r.b12);
+            % The below was the 1. GMD version -- this has been changed (18.12.2020)
+%             FOM1 = sum(...
+%                 -reacf1.*(r.A1.*(exp(r.a1.*zU).*r.b1 - exp(r.b1.*zU).*r.a1 - exp(r.a1.*zL).*r.b1 + exp(r.b1.*zL).*r.a1)...
+%                 +swi.C0i.*exp(r.b1.*zU).*r.a1 -swi.C0i.*exp(r.b1.*zL).*r.a1)./(r.a1.*r.b1)...
+%                 );
+
         end
         
         function FOM2 = calcOM_l2(obj, zU, zL, reac1, bsd, swi, res)
-            % Integral of reacted organic matter, zU and zL within layer 2 (non bioturbated)
+            % Integral of organic matter between zU and zL within layer 2 (non bioturbated)
             
             r = res.rTOC_RCM;
             reacf1=reac1;
             % %             reacf2=reac2;
             
-            FOM2 = sum(...
+            FOM2 = nansum(...
                 -reacf1.*r.A2.*(exp(r.a2.*zU) - exp(r.a2.*zL))./r.a2...
                 );
-            % %                 -reacf2.*r.A22.*(exp(r.a22.*zU) - exp(r.a22.*zL))./r.a22;
         end
         
         %
@@ -798,14 +807,12 @@ classdef benthic_zTOC_RCM < handle
                 % Dominik 18.12.2015: Change 1 added -alpha here //
                 % Dominik 20.01.2016 no just *-1
                 
-                g = -alpha*sum(Phi1_P.PhiI1./(Dtemp.*r.a1.^2-bsd.w.*r.a1-ktemp).*exp(z.*r.a1) + Phi1_P.PhiII1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp).*exp(z.*r.b1) + ...
-                    Phi1_P.PhiIII1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp).*exp(z.*r.b1) );
+                g = -alpha*sum(Phi1_P.PhiI1./(Dtemp.*r.a1.^2-bsd.w.*r.a1-ktemp).*exp(z.*r.a1) + Phi1_P.PhiII1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp).*exp(z.*r.b1) );
                 % % Backup for  g = -alpha*sum(Phi1_P.PhiI1/(Dtemp.*r.a1.^2-bsd.w.*r.a1-ktemp).*exp(z.*r.a1) + Phi1_P.PhiII1/(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp).*exp(z.*r.b1) + ...
                 % % 2 lines above   Phi1_P.PhiIII1/(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp).*exp(z.*r.b1) );
                 %                     Phi1_P.PhiI2/(Dtemp.*r.a12.^2-bsd.w.*r.a12-ktemp).*exp(z.*r.a12) + Phi1_P.PhiII2/(Dtemp.*r.b12.^2-bsd.w.*r.b12-ktemp).*exp(z.*r.b12) + ...
                 %                     Phi1_P.PhiIII2/(Dtemp.*r.b12.^2-bsd.w.*r.b12-ktemp).*exp(z.*r.b12));
-                dgdz = -alpha*sum(Phi1_P.PhiI1./(Dtemp.*r.a1.^2-bsd.w.*r.a1-ktemp).*exp(z.*r.a1).*r.a1 + Phi1_P.PhiII1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp).*exp(z.*r.b1).*r.b1 + ...
-                    Phi1_P.PhiIII1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp).*exp(z.*r.b1).*r.b1);
+                dgdz = -alpha*sum(Phi1_P.PhiI1./(Dtemp.*r.a1.^2-bsd.w.*r.a1-ktemp).*exp(z.*r.a1).*r.a1 + Phi1_P.PhiII1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp).*exp(z.*r.b1).*r.b1);
                 %                     Phi1_P.PhiI2/(Dtemp.*r.a12.^2-bsd.w.*r.a12-ktemp).*exp(z.*r.a12).*r.a12 + Phi1_P.PhiII2/(Dtemp.*r.b12.^2-bsd.w.*r.b12-ktemp).*exp(z.*r.b12).*r.b12 + ...
                 %                     Phi1_P.PhiIII2/(Dtemp.*r.b12.^2-bsd.w.*r.b12-ktemp).*exp(z.*r.b12).*r.b12);
                 
@@ -902,27 +909,23 @@ classdef benthic_zTOC_RCM < handle
             
             % NOW to OM reaction terms!
             % save all Phis in one variable to pass back
-            Phi1.PhiI1   =-pfac.*obj.k.*(reac1).*r.A1./(Dtemp.*r.a1.^2-bsd.w.*r.a1-ktemp);
-            Phi1.PhiII1  = pfac.*obj.k.*(reac1).*r.A1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp);
-            Phi1.PhiIII1 =-pfac.*obj.k.*(reac1).*swi.C0i./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp);
-            % %             Phi1.PhiI2   =-pfac.*obj.k2.*(reac2).*r.A12./(Dtemp.*r.a12.^2-bsd.w.*r.a12-ktemp);
-            % %             Phi1.PhiII2  = pfac.*obj.k2.*(reac2).*r.A12./(Dtemp.*r.b12.^2-bsd.w.*r.b12-ktemp);
-            % %             Phi1.PhiIII2 =-pfac.*obj.k2.*(reac2).*swi.C02./(Dtemp.*r.b12.^2-bsd.w.*r.b12-ktemp);
+           	Phi1.PhiI1   =-pfac.*obj.k.*(reac1).*r.A1./(Dtemp.*r.a1.^2-bsd.w.*r.a1-ktemp);
+            Phi1.PhiII1  = -pfac.*obj.k.*(reac1).*r.B1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp);           
+%            Phi1.PhiII1  = pfac.*obj.k.*(reac1).*r.A1./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp);      % This was the 1. GMD version -- this has been changed (18.12.2020)
+%            Phi1.PhiIII1 =-pfac.*obj.k.*(reac1).*swi.C0i./(Dtemp.*r.b1.^2-bsd.w.*r.b1-ktemp);   % This was the 1. GMD version -- this has been changed (18.12.2020)
             
             ea11z = exp(r.a1.*z);
             eb11z = exp(r.b1.*z);
-            % %             ea12z = exp(r.a12.*z);
-            % %             eb12z = exp(r.b12.*z);
             
             if(ktemp==0) % CHECK: actually no need as ktemp always <> 0
-                g =  sum(Phi1.PhiI1.*ea11z + Phi1.PhiII1.*eb11z + Phi1.PhiIII1.*eb11z);
-                %                     Phi1.PhiI2.*ea12z + Phi1.PhiII2.*eb12z + Phi1.PhiIII2.*eb12z;
+                g =  nansum(Phi1.PhiI1.*ea11z + Phi1.PhiII1.*eb11z);
+%                 g =  sum(Phi1.PhiI1.*ea11z + Phi1.PhiII1.*eb11z + Phi1.PhiIII1.*eb11z); % This was the 1. GMD version -- this has been changed (18.12.2020)
             else
-                g =  sum( Phi1.PhiI1.*ea11z + Phi1.PhiII1.*eb11z + Phi1.PhiIII1.*eb11z) + Qtemp./ktemp;
-                %                     Phi1.PhiI2.*ea12z + Phi1.PhiII2.*eb12z + Phi1.PhiIII2.*eb12z + ;   % here problem if ktemp=0
+                g =  nansum( Phi1.PhiI1.*ea11z + Phi1.PhiII1.*eb11z) + Qtemp./ktemp;
+%                 g =  sum( Phi1.PhiI1.*ea11z + Phi1.PhiII1.*eb11z + Phi1.PhiIII1.*eb11z) + Qtemp./ktemp; % This was the 1. GMD version -- this has been changed (18.12.2020)
             end
-            dgdz = sum(Phi1.PhiI1.*r.a1.*ea11z + Phi1.PhiII1.*r.b1.*eb11z + Phi1.PhiIII1.*r.b1.*eb11z);
-            %                 Phi1.PhiI2.*r.a12.*ea12z + Phi1.PhiII2.*r.b12.*eb12z + Phi1.PhiIII2.*r.b12.*eb12z;
+            dgdz = nansum(Phi1.PhiI1.*r.a1.*ea11z + Phi1.PhiII1.*r.b1.*eb11z);
+%             dgdz = sum(Phi1.PhiI1.*r.a1.*ea11z + Phi1.PhiII1.*r.b1.*eb11z + Phi1.PhiIII1.*r.b1.*eb11z); % This was the 1. GMD version -- this has been changed (18.12.2020)
             
             
             if(alpha == 0) % was z<=res.zox PO4 is independent of M (no info in alpha)

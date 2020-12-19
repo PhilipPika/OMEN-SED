@@ -31,7 +31,12 @@ classdef benthic_test
             
             swi.Test_Dale = false;
             swi.Test_Dale_14G = false;               % use for 14G model as in Dale or nG as specified below
-            swi.plot_fig = true;                                % plot the sediment profiles
+            swi.plot_fig = false;                                % plot the sediment profiles
+            swi.write_output = false;
+
+            swi.calc_P_DIC_ALK=false;       % also calculate P, DIC & ALK?
+
+            swi.IntConst_GMD= false;         % true A1, A2 as in GMD; false: use Sandra's calculation
             
             swi.Nitrogen=true;                                  % calculate N (true/false)
             swi.Iron=true;                                      % calculate Fe (true/false)
@@ -45,14 +50,14 @@ classdef benthic_test
             
             % for nG-model
             swi.nG = 100;
-            swi.p_a =0.1;  % 3e-4;
+            swi.p_a = 3e-4;
             swi.p_nu = 0.125;
             swi.C0_nonbio = 1.0 * 1e-2/12*bsd.rho_sed;                 % TOC concentration at SWI (wt%) -> (mol/cm^3 bulk phase)
             
             
             %            swi.FeIII0=2.8E-005; %3.0E-006;                   	% FeIII concentration at SWI (mol/cm^3) --> TODO: needs to be a flux!
-%             Fe_influx_Dale = 0.1667*1110.0E-006;                     % FeIII influx from Dale but just 16.67% is available for DIR (See his Tab. 2, footnote d)
-%             swi.Flux_FeIII0 =  (Fe_influx_Dale)*365/100^2;           % Dale 1110 mol/(m^2 day)   -->  mol/(cm^2 yr):     *365/100^2
+             Fe_influx_Dale = 0.1667*1110.0E-006;                     % FeIII influx from Dale but just 16.67% is available for DIR (See his Tab. 2, footnote d)
+             swi.Flux_FeIII0 =  (Fe_influx_Dale)*365/100^2;           % Dale 1110 mol/(m^2 day)   -->  mol/(cm^2 yr):     *365/100^2
             %            swi.FeIII0= swi.Flux_FeIII0/((1-bsd.por)*bsd.w);     % calculate concentration [mol/cm^3] from flux [mol/(cm2 yr)] according non-bioturbated flux!!!
             
             swi.O20=200.0E-009;                                 % O2  concentration at SWI (mol/cm^3)
@@ -66,12 +71,14 @@ classdef benthic_test
             swi.DIC0=2.4E-006;                                 	% DIC concentration at SWI (mol/cm^3)
             swi.ALK0=2.4E-006;                                 	% ALK concentration at SWI (mol/cm^3)
             swi.S0=35;                                         	% Salinity at SWI (not used at the moment)
+            
+
             swi.plot_PO4_DIC_ALK=true;
         end
         
         function run_OMEN()
             % run OMEN-SED with default SWI conditions as in default_swi()
-            clear
+            
             tic;
             swi=benthic_test.default_swi();
             swi.TwoG_OM_model = true;
@@ -103,9 +110,9 @@ classdef benthic_test
             Mean_OM = 1/x * 100*12/res.bsd.rho_sed*res.zTOC.calcOM(0.0, x, 1, 1, res.bsd, res.swi, res);
         end
         
-        function [Cox_rate, Flux_Fe2_Dale_units, res, Output]  = run_OMEN_RCM()
+        function [Cox_rate, Flux_Fe2_Dale_units, res, Output]  = run_OMEN_RCM(exp_name)
             % run OMEN-SED with default SWI conditions as in default_swi()
-            clear
+            
             swi = benthic_test.default_swi();
             swi.TwoG_OM_model = false;
             swi.BC_wdepth_flag = false; 
@@ -126,7 +133,7 @@ classdef benthic_test
             
             res=benthic_test.test_benthic(1,swi);
             % set date-time or string going into plot function
-            str_date = [num2str(res.swi.nG) 'G_a=' num2str(res.swi.p_a) '_nu=' num2str(res.swi.p_nu) '_O20_' num2str(res.swi.O20)];
+            str_date = [exp_name, num2str(res.swi.nG) 'G_a=' num2str(res.swi.p_a) '_nu=' num2str(res.swi.p_nu) '_O20_' num2str(res.swi.O20)];
             if(swi.plot_fig)
                 benthic_test.plot_column(res, false, swi, str_date)
                 benthic_test.plot_TOC(res, false, swi, str_date)
@@ -282,10 +289,10 @@ classdef benthic_test
             end
             
             if(depth_dep_a)
-                a_hr_updated(water_depth_updated<500) = 3e-4;% 0.001; % shelf and slope environments after Dale and Thullner
-                a_hr_updated((water_depth_updated>=500) & (water_depth_updated<2000)) = 3e-4;%0.1; % shelf and slope environments after Dale and Thullner
-             	a_hr_updated((water_depth_updated>=2000) & (water_depth_updated< 3000)) = 5.0; % intermediate environments compare Bradley and Thullner
-             	a_hr_updated((water_depth_updated>=3000) & (water_depth_updated< 4250)) = 20.0; % intermediate environments after Dale
+                a_hr_updated(water_depth_updated<500) = 3e-4;;% 0.001; % shelf and slope environments after Dale and Thullner
+                a_hr_updated((water_depth_updated>=500) & (water_depth_updated<2000)) = 1.0;%0.1; % shelf and slope environments after Dale and Thullner
+             	a_hr_updated((water_depth_updated>=2000) & (water_depth_updated< 3000)) = 10.0; % intermediate environments compare Bradley and Thullner
+             	a_hr_updated((water_depth_updated>=3000) & (water_depth_updated< 4250)) = 25.0; % intermediate environments after Dale
              	a_hr_updated(water_depth_updated>=4250) = 100.0; % abyss
             end
             
@@ -569,8 +576,6 @@ classdef benthic_test
         
         function res = test_benthic( ncl, swi )
             %            loc_BW_O2_anoxia = 5.0e-9;       	% set to 5.0 nanomol/cm^3
-            calc_P_DIC_ALK=false;
-            write_output = false;
             
             % counters for problems in calculation
             res.iter_fun6 = 0;      % boundaries have same sign -> reduce gammaFe2
@@ -637,7 +642,7 @@ classdef benthic_test
             res.zNH4 = benthic_zNH4(res.bsd, res.swi);
             res.zFe2 = benthic_zFe2(res.bsd, res.swi, Cox_total);
             res.zH2S = benthic_zH2S(res.bsd, res.swi);
-            if(calc_P_DIC_ALK)
+            if(swi.calc_P_DIC_ALK)
                 res.zPO4_M = benthic_zPO4_M(res.bsd, res.swi);
                 res.zDIC = benthic_zDIC(res.bsd, res.swi);
                 res.zALK = benthic_zALK(res.bsd, res.swi);
@@ -824,7 +829,7 @@ classdef benthic_test
                 res = res.zFe2.calc(res.bsd, res.swi, res);
             end
             res = res.zH2S.calc(res.bsd, res.swi, res);
-            if(calc_P_DIC_ALK)
+            if(swi.calc_P_DIC_ALK)
                 res = res.zPO4_M.calc(res.bsd, res.swi, res);
                 res = res.zDIC.calc(res.bsd, res.swi, res);
                 res = res.zALK.calc(res.bsd, res.swi, res);
@@ -832,7 +837,7 @@ classdef benthic_test
             %            toc;
             
             %%%%% WRITE OUTPUT:
-            if(write_output)
+            if(swi.write_output)
                 answ = res
                 if(swi.TwoG_OM_model)
                     % use fluxes to calculate burial efficiency and total Cox:
@@ -1177,7 +1182,7 @@ classdef benthic_test
                     %            title ('H2S (mol/cm^3)')
                     
                     % save Figure
-                    print(fig1, '-depsc2', ['0_ALL_PROFILES_' str_date '.eps']);
+                    print(fig1, '-depsc2', [str_date '_ALL_PROFILES.eps']);
                     
                 else % no Nitrogen
                     
@@ -1283,7 +1288,7 @@ classdef benthic_test
                     %            title ('H2S (mol/cm^3)')
                     
                     
-                    print('-dpsc2', ['0_PROFILES_' str_date '.eps']);
+                    print('-dpsc2', [str_date '_ALL_PROFILES.eps']);
                 end
             end
             
@@ -1401,7 +1406,7 @@ classdef benthic_test
                 ylabel('Depth (cm)')
                 
                 
-                print(fig2, '-depsc2', ['0_PO4_PROFILES_' str_date '.eps']);
+                print(fig2, '-depsc2', [str_date '_PO4_PROFILES.eps']);
             end
             
             
@@ -1677,7 +1682,7 @@ classdef benthic_test
         end
         
         function plot_TOC(res, ~, swi, str_date)
-            figure
+            fig_toc =figure;
             
             set(0,'defaultLineLineWidth', 2)
             set(0,'DefaultAxesFontSize',12)
@@ -1711,6 +1716,8 @@ classdef benthic_test
             xlabel ('TOC (wt%)')
             ylabel('Depth (cm)')
             %            title('Total TOC (wt%)')
+            print(fig_toc, '-depsc2', [str_date '_TOC_PROFILES.eps']);
+
         end
         
         function plot_TOC_O2_column(res, debug, swi, str_date)
