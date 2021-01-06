@@ -44,7 +44,7 @@ classdef benthic_main < handle
         DICC2;                                  % DIC/C below zSO4 (mol/mol)
         MC;                                     % CH4/C (mol/mol)
         gamma=0.95;                           	% fraction of NH4 that is oxidised in oxic layer
-        gammaH2S=1.0;                         	% fraction of H2S that is oxidised in oxic layer
+        gammaH2S=0.95;                         	% fraction of H2S that is oxidised in oxic layer
         gammaFeS=0.0;                         	% fraction of H2S that is precipitated as pyrite
         gammaCH4=0.99;                         	% fraction of CH4 that is oxidised at SO4
         satSO4=0.0;                           	% SO4 saturation
@@ -64,10 +64,12 @@ classdef benthic_main < handle
         
         % Diagnostic output from root finder
         %fzerooptions;
-        %fzerooptions = optimset('Display','iter');
+%         fzerooptions = optimset('Display','iter');
+%         fzerooptions = optimset('PlotFcns',@optimplotfval)
         %fzerooptions = optimset('Display','final');
         %fzerooptions = optimset('TolX',0.001);
         fzerooptions = optimset('TolX',100*eps);
+%         fzerooptions = optimset('TolX',100*eps,'Display','final');
     end
     
     methods
@@ -142,7 +144,7 @@ classdef benthic_main < handle
             z2 = 4000;
             c1 = 3;
             c2 = 10;
-            w = w1/(1+(wdepth/z1)^c1) + w2/(1+(wdepth/z2)^c2);
+            w = w1./(1+(wdepth./z1).^c1) + w2./(1+(wdepth./z2).^c2);
         end
         
         function Dbio = biorate(wdepth)
@@ -150,6 +152,10 @@ classdef benthic_main < handle
             Dbio= 5.2*(10.0^(0.7624-0.0003972*wdepth));	
         end
         
+         function parameter_a = pa_Arndt(omega)
+            % bioturbation coeff, cm^2/yr (after Middelburg et al. (1997))
+            parameter_a =  10.^(3.35 - 14.81 .* omega);
+        end
         
         
     end
